@@ -133,6 +133,19 @@
   /* ── Empty / Loading ── */
   .empty{padding:48px;text-align:center;color:var(--muted);font-size:13px;}
   .empty-icon{font-size:36px;margin-bottom:10px;opacity:.4;}
+  /* ── IO List ── */
+  .io-qty-ctrl{display:flex;align-items:center;gap:6px;justify-content:center;}
+  .io-btn{width:32px;height:32px;border-radius:7px;border:none;cursor:pointer;font-size:18px;font-weight:700;display:flex;align-items:center;justify-content:center;transition:all .15s;flex-shrink:0;}
+  .io-btn-plus{background:rgba(34,197,94,.15);color:var(--green);}
+  .io-btn-plus:hover{background:rgba(34,197,94,.3);}
+  .io-btn-plus:active{transform:scale(.92);}
+  .io-btn-minus{background:rgba(239,68,68,.15);color:var(--red);}
+  .io-btn-minus:hover{background:rgba(239,68,68,.3);}
+  .io-btn-minus:active{transform:scale(.92);}
+  .io-qty-input{width:56px;text-align:center;background:var(--bg);border:1px solid var(--border);border-radius:7px;color:var(--text);padding:6px 4px;font-size:13px;font-family:'JetBrains Mono',monospace;outline:none;}
+  .io-qty-input:focus{border-color:var(--accent);}
+  .io-current{font-family:'JetBrains Mono',monospace;font-size:15px;font-weight:600;text-align:center;}
+
   .loading{display:inline-block;width:14px;height:14px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .6s linear infinite;margin-right:6px;}
   @keyframes spin{to{transform:rotate(360deg)}}
 
@@ -198,8 +211,7 @@
   </div>
   <div class="nav-item active" data-page="dashboard"><span>▦</span> 대시보드</div>
   <div class="nav-item" data-page="items"><span>◈</span> 품목 관리</div>
-  <div class="nav-item" data-page="inbound"><span>↑</span> 입고 등록</div>
-  <div class="nav-item" data-page="outbound"><span>↓</span> 출고 등록</div>
+  <div class="nav-item" data-page="inbound"><span>↕</span> 입고 / 출고</div>
   <div class="nav-item" data-page="history"><span>≡</span> 이력 조회</div>
   <div class="db-status" id="db-status">
     <div class="db-dot" id="db-dot"></div>
@@ -212,8 +224,7 @@
   <div class="mobile-nav-items">
     <button class="mobile-nav-item active" data-page="dashboard"><span class="mn-icon">▦</span>대시보드</button>
     <button class="mobile-nav-item" data-page="items"><span class="mn-icon">◈</span>품목</button>
-    <button class="mobile-nav-item" data-page="inbound"><span class="mn-icon">↑</span>입고</button>
-    <button class="mobile-nav-item" data-page="outbound"><span class="mn-icon">↓</span>출고</button>
+    <button class="mobile-nav-item" data-page="inbound"><span class="mn-icon">↕</span>입출고</button>
     <button class="mobile-nav-item" data-page="history"><span class="mn-icon">≡</span>이력</button>
   </div>
 </nav>
@@ -265,43 +276,33 @@
     </div>
   </div>
 
-  <!-- 입고 등록 -->
+  <!-- 입고/출고 통합 페이지 -->
   <div class="page" id="page-inbound">
-    <div class="page-header"><div class="page-title">입고 등록</div></div>
-    <div class="form-section">
-      <div class="form-section-header"><div class="table-title">입고 정보 입력</div></div>
-      <div class="form-section-body">
-        <div class="form-grid">
-          <div class="form-group full"><label>품목 선택</label><select id="in-item"><option value="">-- 품목을 선택하세요 --</option></select></div>
-          <div class="form-group"><label>입고 수량</label><input type="number" id="in-qty" min="1" placeholder="0"></div>
-          <div class="form-group"><label>입고일자</label><input type="date" id="in-date"></div>
-          <div class="form-group full"><label>메모</label><textarea id="in-memo" placeholder="입고 관련 메모 (선택)"></textarea></div>
-        </div>
-        <div style="margin-top:20px;display:flex;justify-content:flex-end;">
-          <button class="btn btn-green" id="btn-inbound" onclick="doInbound()">↑ 입고 처리</button>
-        </div>
+    <div class="page-header">
+      <div class="page-title">입고 / 출고 등록</div>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <label style="font-size:12px;color:var(--muted);">날짜</label>
+        <input type="date" id="io-date" style="background:var(--surface);border:1px solid var(--border);border-radius:7px;color:var(--text);padding:7px 12px;font-size:13px;font-family:inherit;outline:none;">
       </div>
+    </div>
+    <!-- 검색 -->
+    <div style="margin-bottom:14px;">
+      <input type="text" class="search-input" id="io-search" placeholder="품목명 검색..." oninput="renderIOList()" style="width:100%;max-width:340px;">
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr>
+          <th>카테고리</th><th>품목명</th><th>주관경</th><th>스케줄</th>
+          <th style="text-align:center;">현재수량</th>
+          <th style="text-align:center;">입고 / 출고</th>
+        </tr></thead>
+        <tbody id="io-tbody"></tbody>
+      </table>
     </div>
   </div>
 
-  <!-- 출고 등록 -->
-  <div class="page" id="page-outbound">
-    <div class="page-header"><div class="page-title">출고 등록</div></div>
-    <div class="form-section">
-      <div class="form-section-header"><div class="table-title">출고 정보 입력</div></div>
-      <div class="form-section-body">
-        <div class="form-grid">
-          <div class="form-group full"><label>품목 선택</label><select id="out-item"><option value="">-- 품목을 선택하세요 --</option></select></div>
-          <div class="form-group"><label>출고 수량</label><input type="number" id="out-qty" min="1" placeholder="0"></div>
-          <div class="form-group"><label>출고일자</label><input type="date" id="out-date"></div>
-          <div class="form-group full"><label>메모</label><textarea id="out-memo" placeholder="출고 관련 메모 (선택)"></textarea></div>
-        </div>
-        <div style="margin-top:20px;display:flex;justify-content:flex-end;">
-          <button class="btn btn-danger" id="btn-outbound" onclick="doOutbound()">↓ 출고 처리</button>
-        </div>
-      </div>
-    </div>
-  </div>
+  <!-- 출고 (빈 페이지 - 입고와 통합) -->
+  <div class="page" id="page-outbound"></div>
 
   <!-- 이력 조회 -->
   <div class="page" id="page-history">
@@ -333,9 +334,9 @@
   <div class="modal">
     <div class="modal-title" id="modal-item-title">품목 추가</div>
     <div class="form-grid">
-      <div class="form-group full"><label>카테고리</label><input type="text" id="m-cat" placeholder="예: Pipe, FLANGE"></div>
-      <div class="form-group full"><label>품목명 *</label><input type="text" id="m-name" placeholder="예: WELDING NECK, SLIPON,SLEEVE50,SLEEVE100"></div>
-      <div class="form-group"><label>품목코드</label><input type="text" id="m-code" placeholder="예: ANSI, JIS"></div>
+      <div class="form-group full"><label>카테고리</label><input type="text" id="m-cat" placeholder="예: 배관, 소모품"></div>
+      <div class="form-group full"><label>품목명 *</label><input type="text" id="m-name" placeholder="품목명 입력"></div>
+      <div class="form-group"><label>품목코드</label><input type="text" id="m-code" placeholder="예: P001"></div>
       <div class="form-group"><label>주관경</label><input type="text" id="m-unit" placeholder="예: 25A, 50A, 100A"></div>
       <div class="form-group"><label>스케줄</label><input type="text" id="m-schedule" placeholder="예: SCH40, SCH80"></div>
       <div class="form-group"><label>초기 수량</label><input type="number" id="m-qty" min="0" value="0"></div>
@@ -429,7 +430,8 @@ function navigateTo(page) {
   document.getElementById('page-' + page).classList.add('active');
   if (page === 'dashboard') renderDashboard();
   if (page === 'items') renderItems();
-  if (page === 'inbound' || page === 'outbound') fillItemSelects();
+  if (page === 'inbound') { fillItemSelects(); }
+  if (page === 'outbound') { navigateTo('inbound'); return; }
   if (page === 'history') renderHistory();
 }
 
@@ -587,79 +589,74 @@ window.deleteItem = async function(id) {
   }
 }
 
-// ── Item Selects ───────────────────────────────
+// ── IO List (입고/출고 통합) ────────────────────
+window.renderIOList = function() {
+  const q        = (document.getElementById('io-search')?.value||'').toLowerCase();
+  const filtered = itemsCache.filter(i => i.name.toLowerCase().includes(q));
+  const tb       = document.getElementById('io-tbody');
+  if (!tb) return;
+  if (filtered.length === 0) {
+    tb.innerHTML = '<tr><td colspan="6"><div class="empty"><div class="empty-icon">📦</div>품목 없음</div></td></tr>';
+    return;
+  }
+  tb.innerHTML = filtered.map(i => {
+    const qtyColor = i.qty === 0 ? 'var(--red)' : i.qty <= i.minQty ? 'var(--yellow)' : 'var(--green)';
+    return `<tr>
+      <td>${i.category||'-'}</td>
+      <td style="font-weight:500">${i.name}</td>
+      <td>${i.unit||'-'}</td>
+      <td>${i.schedule||'-'}</td>
+      <td class="io-current" style="color:${qtyColor}">${i.qty}</td>
+      <td>
+        <div class="io-qty-ctrl">
+          <button class="io-btn io-btn-minus" onclick="doIO('${i.id}','out')" title="출고">−</button>
+          <input class="io-qty-input" id="io-qty-${i.id}" type="number" value="1" min="1">
+          <button class="io-btn io-btn-plus" onclick="doIO('${i.id}','in')" title="입고">+</button>
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+window.doIO = async function(itemId, type) {
+  const qtyEl = document.getElementById('io-qty-' + itemId);
+  const qty   = parseInt(qtyEl?.value);
+  const date  = document.getElementById('io-date')?.value || new Date().toISOString().slice(0,10);
+  if (!qty || qty < 1) { toast('수량을 확인하세요', 'error'); return; }
+
+  const item = itemsCache.find(i => i.id === itemId);
+  if (!item) return;
+
+  if (type === 'out' && (item.qty||0) < qty) {
+    toast(`재고 부족! 현재 ${item.qty}개`, 'error'); return;
+  }
+
+  const newQty = type === 'in' ? (item.qty||0) + qty : item.qty - qty;
+
+  try {
+    await updateDoc(doc(db, 'items', itemId), { qty: newQty });
+    await addDoc(collection(db, 'history'), {
+      type, itemId, itemName: item.name,
+      qty, afterQty: newQty,
+      date, memo: '', createdAt: serverTimestamp()
+    });
+    qtyEl.value = 1;
+    toast(type === 'in' ? `✅ 입고: ${item.name} +${qty}` : `📤 출고: ${item.name} -${qty}`,
+          type === 'in' ? 'success' : 'error');
+  } catch(e) {
+    toast('처리 실패: ' + e.message, 'error');
+  }
+}
+
+// ── Inbound/Outbound (레거시 호환) ─────────────
 window.fillItemSelects = function() {
-  const opts = '<option value="">-- 품목을 선택하세요 --</option>' +
-    itemsCache.map(i => `<option value="${i.id}">${i.name} (현재: ${i.qty} ${i.unit||'개'})</option>`).join('');
-  document.getElementById('in-item').innerHTML  = opts;
-  document.getElementById('out-item').innerHTML = opts;
   const today = new Date().toISOString().slice(0,10);
-  if (!document.getElementById('in-date').value)  document.getElementById('in-date').value  = today;
-  if (!document.getElementById('out-date').value) document.getElementById('out-date').value = today;
+  const el = document.getElementById('io-date');
+  if (el && !el.value) el.value = today;
+  renderIOList();
 }
-
-// ── Inbound ────────────────────────────────────
-window.doInbound = async function() {
-  const itemId = document.getElementById('in-item').value;
-  const qty    = parseInt(document.getElementById('in-qty').value);
-  const date   = document.getElementById('in-date').value;
-  const memo   = document.getElementById('in-memo').value.trim();
-  if (!itemId) { toast('품목을 선택하세요', 'error'); return; }
-  if (!qty || qty < 1) { toast('수량을 올바르게 입력하세요', 'error'); return; }
-
-  const btn = document.getElementById('btn-inbound');
-  btn.disabled = true; btn.innerHTML = '<span class="loading"></span>처리 중...';
-
-  try {
-    const item   = itemsCache.find(i => i.id === itemId);
-    const newQty = (item.qty||0) + qty;
-    await updateDoc(doc(db, 'items', itemId), { qty: newQty });
-    await addDoc(collection(db, 'history'), {
-      type:'in', itemId, itemName:item.name,
-      qty, afterQty:newQty,
-      date: date||new Date().toISOString().slice(0,10),
-      memo, createdAt: serverTimestamp()
-    });
-    document.getElementById('in-qty').value  = '';
-    document.getElementById('in-memo').value = '';
-    toast(`입고 완료: ${item.name} +${qty}`);
-  } catch(e) {
-    toast('입고 처리 실패: ' + e.message, 'error');
-  }
-  btn.disabled = false; btn.innerHTML = '↑ 입고 처리';
-}
-
-// ── Outbound ───────────────────────────────────
-window.doOutbound = async function() {
-  const itemId = document.getElementById('out-item').value;
-  const qty    = parseInt(document.getElementById('out-qty').value);
-  const date   = document.getElementById('out-date').value;
-  const memo   = document.getElementById('out-memo').value.trim();
-  if (!itemId) { toast('품목을 선택하세요', 'error'); return; }
-  if (!qty || qty < 1) { toast('수량을 올바르게 입력하세요', 'error'); return; }
-
-  const btn = document.getElementById('btn-outbound');
-  btn.disabled = true; btn.innerHTML = '<span class="loading"></span>처리 중...';
-
-  try {
-    const item = itemsCache.find(i => i.id === itemId);
-    if ((item.qty||0) < qty) { toast('재고 수량이 부족합니다', 'error'); btn.disabled=false; btn.innerHTML='↓ 출고 처리'; return; }
-    const newQty = item.qty - qty;
-    await updateDoc(doc(db, 'items', itemId), { qty: newQty });
-    await addDoc(collection(db, 'history'), {
-      type:'out', itemId, itemName:item.name,
-      qty, afterQty:newQty,
-      date: date||new Date().toISOString().slice(0,10),
-      memo, createdAt: serverTimestamp()
-    });
-    document.getElementById('out-qty').value  = '';
-    document.getElementById('out-memo').value = '';
-    toast(`출고 완료: ${item.name} -${qty}`);
-  } catch(e) {
-    toast('출고 처리 실패: ' + e.message, 'error');
-  }
-  btn.disabled = false; btn.innerHTML = '↓ 출고 처리';
-}
+window.doInbound  = function() {}
+window.doOutbound = function() {}
 
 // ── History ────────────────────────────────────
 let histFilter = 'all';
@@ -804,8 +801,8 @@ function todayStr() { return new Date().toISOString().slice(0,10).replace(/-/g,'
 
 // ── Init ───────────────────────────────────────
 const today = new Date().toISOString().slice(0,10);
-document.getElementById('in-date').value  = today;
-document.getElementById('out-date').value = today;
+const ioDateEl = document.getElementById('io-date');
+if (ioDateEl) ioDateEl.value = today;
 startListeners();
 </script>
 </body>
