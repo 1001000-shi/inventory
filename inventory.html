@@ -137,6 +137,54 @@
   @keyframes spin{to{transform:rotate(360deg)}}
 
   .mono{font-family:'JetBrains Mono',monospace;}
+
+  /* ── Mobile Bottom Nav ── */
+  .mobile-nav{display:none;position:fixed;bottom:0;left:0;right:0;background:var(--surface);border-top:1px solid var(--border);z-index:100;padding:0;}
+  .mobile-nav-items{display:flex;}
+  .mobile-nav-item{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:10px 4px 12px;cursor:pointer;color:var(--muted);font-size:10px;transition:all .15s;border:none;background:none;font-family:inherit;}
+  .mobile-nav-item .mn-icon{font-size:20px;line-height:1;}
+  .mobile-nav-item.active{color:var(--accent);}
+
+  /* ── Responsive ── */
+  @media (max-width: 768px) {
+    .sidebar { display: none; }
+    .mobile-nav { display: block; }
+    .main {
+      margin-left: 0;
+      max-width: 100vw;
+      padding: 16px 14px 80px;
+    }
+    .page-title { font-size: 17px; }
+    .page-header { flex-wrap: wrap; gap: 10px; margin-bottom: 16px; }
+    .page-header .btn { font-size: 12px; padding: 7px 12px; }
+
+    /* Cards: 2열 */
+    .cards { grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 16px; }
+    .card { padding: 14px; }
+    .card-value { font-size: 22px; }
+    .card-label { font-size: 10px; }
+
+    /* Table: 가로 스크롤 */
+    .table-wrap { overflow-x: auto; }
+    table { min-width: 480px; }
+    th, td { padding: 10px 12px; font-size: 12px; }
+    .table-header { flex-direction: column; align-items: flex-start; gap: 10px; padding: 12px 14px; }
+    .search-box { width: 100%; flex-wrap: wrap; }
+    .search-input { width: 100%; }
+    .filter-tabs { width: 100%; }
+    .filter-tab { flex: 1; text-align: center; }
+
+    /* Modal */
+    .modal { width: calc(100vw - 28px); padding: 20px 16px; max-height: 90vh; overflow-y: auto; }
+    .form-grid { grid-template-columns: 1fr; }
+    .form-group.full { grid-column: 1; }
+
+    /* Form section */
+    .form-section { max-width: 100%; }
+
+    /* Low stock */
+    .low-item { flex-direction: column; align-items: flex-start; gap: 6px; }
+  }
 </style>
 </head>
 <body>
@@ -156,6 +204,17 @@
   <div class="db-status" id="db-status">
     <div class="db-dot" id="db-dot"></div>
     <span id="db-label">연결 중...</span>
+  </div>
+</nav>
+
+<!-- Mobile Bottom Nav -->
+<nav class="mobile-nav">
+  <div class="mobile-nav-items">
+    <button class="mobile-nav-item active" data-page="dashboard"><span class="mn-icon">▦</span>대시보드</button>
+    <button class="mobile-nav-item" data-page="items"><span class="mn-icon">◈</span>품목</button>
+    <button class="mobile-nav-item" data-page="inbound"><span class="mn-icon">↑</span>입고</button>
+    <button class="mobile-nav-item" data-page="outbound"><span class="mn-icon">↓</span>출고</button>
+    <button class="mobile-nav-item" data-page="history"><span class="mn-icon">≡</span>이력</button>
   </div>
 </nav>
 
@@ -359,18 +418,20 @@ function startListeners() {
 }
 
 // ── Navigation ─────────────────────────────────
-document.querySelectorAll('.nav-item').forEach(el => {
-  el.addEventListener('click', () => {
-    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-    el.classList.add('active');
-    const page = el.dataset.page;
-    document.getElementById('page-' + page).classList.add('active');
-    if (page === 'dashboard') renderDashboard();
-    if (page === 'items') renderItems();
-    if (page === 'inbound' || page === 'outbound') fillItemSelects();
-    if (page === 'history') renderHistory();
-  });
+function navigateTo(page) {
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.querySelectorAll('.mobile-nav-item').forEach(n => n.classList.remove('active'));
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll(`[data-page="${page}"]`).forEach(el => el.classList.add('active'));
+  document.getElementById('page-' + page).classList.add('active');
+  if (page === 'dashboard') renderDashboard();
+  if (page === 'items') renderItems();
+  if (page === 'inbound' || page === 'outbound') fillItemSelects();
+  if (page === 'history') renderHistory();
+}
+
+document.querySelectorAll('.nav-item, .mobile-nav-item').forEach(el => {
+  el.addEventListener('click', () => navigateTo(el.dataset.page));
 });
 
 // ── Dashboard ──────────────────────────────────
