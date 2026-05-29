@@ -7,289 +7,136 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=JetBrains+Mono:wght@400;600&display=swap');
-
   :root {
-    --bg: #0e1117;
-    --surface: #161b26;
-    --surface2: #1e2534;
-    --border: #2a3347;
-    --accent: #3b82f6;
-    --accent-glow: rgba(59,130,246,0.15);
-    --green: #22c55e;
-    --red: #ef4444;
-    --yellow: #f59e0b;
-    --text: #e2e8f0;
-    --muted: #64748b;
-    --radius: 10px;
+    --bg:#0e1117;--surface:#161b26;--surface2:#1e2534;--border:#2a3347;
+    --accent:#3b82f6;--accent-glow:rgba(59,130,246,0.15);
+    --green:#22c55e;--red:#ef4444;--yellow:#f59e0b;
+    --text:#e2e8f0;--muted:#64748b;--radius:10px;
   }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex;}
 
-  * { box-sizing: border-box; margin: 0; padding: 0; }
+  /* ── Sidebar ── */
+  .sidebar{width:220px;min-height:100vh;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:24px 0;position:fixed;top:0;left:0;z-index:100;}
+  .logo{padding:0 20px 28px;border-bottom:1px solid var(--border);margin-bottom:16px;}
+  .logo-icon{width:36px;height:36px;background:var(--accent);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:18px;margin-bottom:10px;box-shadow:0 0 16px var(--accent-glow);}
+  .logo h1{font-size:15px;font-weight:700;letter-spacing:-.3px;}
+  .logo p{font-size:11px;color:var(--muted);margin-top:2px;}
+  .nav-item{display:flex;align-items:center;gap:10px;padding:10px 20px;cursor:pointer;font-size:13.5px;color:var(--muted);border-left:3px solid transparent;transition:all .15s;}
+  .nav-item:hover{color:var(--text);background:var(--surface2);}
+  .nav-item.active{color:var(--accent);background:var(--accent-glow);border-left-color:var(--accent);}
 
-  body {
-    font-family: 'Noto Sans KR', sans-serif;
-    background: var(--bg);
-    color: var(--text);
-    min-height: 100vh;
-    display: flex;
-  }
+  /* ── DB Status ── */
+  .db-status{margin:auto 20px 0;padding:10px 14px;border-radius:8px;font-size:12px;display:flex;align-items:center;gap:8px;border:1px solid var(--border);}
+  .db-dot{width:8px;height:8px;border-radius:50%;background:var(--muted);flex-shrink:0;}
+  .db-dot.connected{background:var(--green);box-shadow:0 0 6px var(--green);}
+  .db-dot.error{background:var(--red);}
 
-  /* Sidebar */
-  .sidebar {
-    width: 220px;
-    min-height: 100vh;
-    background: var(--surface);
-    border-right: 1px solid var(--border);
-    display: flex;
-    flex-direction: column;
-    padding: 24px 0;
-    position: fixed;
-    top: 0; left: 0;
-    z-index: 100;
-  }
+  /* ── Main ── */
+  .main{margin-left:220px;flex:1;padding:28px 32px;max-width:calc(100vw - 220px);}
+  .page{display:none;}
+  .page.active{display:block;}
+  .page-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;}
+  .page-title{font-size:20px;font-weight:700;}
+  .page-title span{color:var(--muted);font-weight:400;font-size:13px;margin-left:10px;}
 
-  .logo {
-    padding: 0 20px 28px;
-    border-bottom: 1px solid var(--border);
-    margin-bottom: 16px;
-  }
-  .logo-icon {
-    width: 36px; height: 36px;
-    background: var(--accent);
-    border-radius: 8px;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 18px;
-    margin-bottom: 10px;
-    box-shadow: 0 0 16px var(--accent-glow);
-  }
-  .logo h1 { font-size: 15px; font-weight: 700; letter-spacing: -0.3px; }
-  .logo p { font-size: 11px; color: var(--muted); margin-top: 2px; }
+  /* ── Cards ── */
+  .cards{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:28px;}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px;position:relative;overflow:hidden;}
+  .card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;}
+  .card.blue::before{background:var(--accent);}
+  .card.green::before{background:var(--green);}
+  .card.red::before{background:var(--red);}
+  .card.yellow::before{background:var(--yellow);}
+  .card-label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:10px;}
+  .card-value{font-family:'JetBrains Mono',monospace;font-size:28px;font-weight:600;line-height:1;}
+  .card-sub{font-size:11px;color:var(--muted);margin-top:6px;}
+  .card.blue .card-value{color:var(--accent);}
+  .card.green .card-value{color:var(--green);}
+  .card.red .card-value{color:var(--red);}
+  .card.yellow .card-value{color:var(--yellow);}
 
-  .nav-item {
-    display: flex; align-items: center; gap: 10px;
-    padding: 10px 20px;
-    cursor: pointer;
-    font-size: 13.5px;
-    color: var(--muted);
-    border-left: 3px solid transparent;
-    transition: all 0.15s;
-  }
-  .nav-item:hover { color: var(--text); background: var(--surface2); }
-  .nav-item.active { color: var(--accent); background: var(--accent-glow); border-left-color: var(--accent); }
-  .nav-icon { font-size: 16px; }
+  /* ── Table ── */
+  .table-wrap{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;}
+  .table-header{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border);}
+  .table-title{font-size:14px;font-weight:600;}
+  .search-box{display:flex;gap:8px;align-items:center;}
+  .search-input{background:var(--bg);border:1px solid var(--border);border-radius:7px;color:var(--text);padding:7px 12px;font-size:13px;font-family:inherit;outline:none;width:200px;transition:border-color .15s;}
+  .search-input:focus{border-color:var(--accent);}
+  table{width:100%;border-collapse:collapse;}
+  thead tr{background:var(--surface2);}
+  th{padding:11px 16px;text-align:left;font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;border-bottom:1px solid var(--border);}
+  td{padding:12px 16px;font-size:13px;border-bottom:1px solid var(--border);}
+  tbody tr:last-child td{border-bottom:none;}
+  tbody tr:hover td{background:var(--surface2);}
 
-  /* Main */
-  .main {
-    margin-left: 220px;
-    flex: 1;
-    padding: 28px 32px;
-    max-width: calc(100vw - 220px);
-  }
+  /* ── Badge ── */
+  .badge{display:inline-flex;align-items:center;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:600;}
+  .badge-in{background:rgba(34,197,94,.12);color:var(--green);}
+  .badge-out{background:rgba(239,68,68,.12);color:var(--red);}
+  .badge-ok{background:rgba(59,130,246,.12);color:var(--accent);}
+  .badge-low{background:rgba(245,158,11,.12);color:var(--yellow);}
+  .badge-zero{background:rgba(239,68,68,.12);color:var(--red);}
 
-  .page { display: none; }
-  .page.active { display: block; }
+  /* ── Buttons ── */
+  .btn{padding:8px 16px;border-radius:7px;font-size:13px;font-family:inherit;font-weight:500;cursor:pointer;border:none;transition:all .15s;display:inline-flex;align-items:center;gap:6px;}
+  .btn-primary{background:var(--accent);color:#fff;}
+  .btn-primary:hover{background:#2563eb;box-shadow:0 0 12px var(--accent-glow);}
+  .btn-outline{background:transparent;color:var(--muted);border:1px solid var(--border);}
+  .btn-outline:hover{color:var(--text);border-color:var(--accent);}
+  .btn-danger{background:rgba(239,68,68,.1);color:var(--red);border:1px solid rgba(239,68,68,.2);}
+  .btn-danger:hover{background:rgba(239,68,68,.2);}
+  .btn-green{background:rgba(34,197,94,.1);color:var(--green);border:1px solid rgba(34,197,94,.2);}
+  .btn-green:hover{background:rgba(34,197,94,.2);}
+  .btn-sm{padding:5px 10px;font-size:12px;}
+  .btn:disabled{opacity:.4;cursor:not-allowed;}
 
-  /* Page header */
-  .page-header {
-    display: flex; align-items: center; justify-content: space-between;
-    margin-bottom: 24px;
-  }
-  .page-title { font-size: 20px; font-weight: 700; }
-  .page-title span { color: var(--muted); font-weight: 400; font-size: 13px; margin-left: 10px; }
+  /* ── Modal ── */
+  .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);backdrop-filter:blur(4px);z-index:200;align-items:center;justify-content:center;}
+  .modal-overlay.open{display:flex;}
+  .modal{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:28px;width:460px;box-shadow:0 20px 60px rgba(0,0,0,.5);animation:modalIn .2s ease;}
+  @keyframes modalIn{from{transform:translateY(-12px);opacity:0}to{transform:none;opacity:1}}
+  .modal-title{font-size:16px;font-weight:700;margin-bottom:20px;}
+  .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+  .form-group{display:flex;flex-direction:column;gap:6px;}
+  .form-group.full{grid-column:1/-1;}
+  label{font-size:12px;color:var(--muted);font-weight:500;}
+  input,select,textarea{background:var(--bg);border:1px solid var(--border);border-radius:7px;color:var(--text);padding:9px 12px;font-size:13px;font-family:inherit;outline:none;transition:border-color .15s;}
+  input:focus,select:focus,textarea:focus{border-color:var(--accent);}
+  select option{background:var(--surface2);}
+  textarea{resize:vertical;min-height:70px;}
+  .modal-footer{display:flex;gap:10px;justify-content:flex-end;margin-top:22px;}
 
-  /* Cards */
-  .cards { display: grid; grid-template-columns: repeat(4,1fr); gap: 16px; margin-bottom: 28px; }
-  .card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 20px;
-    position: relative;
-    overflow: hidden;
-  }
-  .card::before {
-    content: '';
-    position: absolute; top: 0; left: 0; right: 0; height: 2px;
-  }
-  .card.blue::before { background: var(--accent); }
-  .card.green::before { background: var(--green); }
-  .card.red::before { background: var(--red); }
-  .card.yellow::before { background: var(--yellow); }
+  /* ── Toast ── */
+  #toast{position:fixed;bottom:24px;right:24px;background:var(--surface2);border:1px solid var(--border);border-radius:9px;padding:12px 18px;font-size:13px;z-index:999;opacity:0;transform:translateY(8px);transition:all .3s;pointer-events:none;}
+  #toast.show{opacity:1;transform:none;}
+  #toast.success{border-color:var(--green);color:var(--green);}
+  #toast.error{border-color:var(--red);color:var(--red);}
+  #toast.info{border-color:var(--accent);color:var(--accent);}
 
-  .card-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 10px; }
-  .card-value { font-family: 'JetBrains Mono', monospace; font-size: 28px; font-weight: 600; line-height: 1; }
-  .card-sub { font-size: 11px; color: var(--muted); margin-top: 6px; }
+  /* ── Low stock ── */
+  .low-stock-list{display:flex;flex-direction:column;gap:8px;padding:0 20px 16px;}
+  .low-item{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:rgba(245,158,11,.05);border:1px solid rgba(245,158,11,.15);border-radius:7px;}
+  .low-item-name{font-size:13px;font-weight:500;}
+  .low-item-qty{font-family:'JetBrains Mono';font-size:13px;color:var(--yellow);}
 
-  .card.blue .card-value { color: var(--accent); }
-  .card.green .card-value { color: var(--green); }
-  .card.red .card-value { color: var(--red); }
-  .card.yellow .card-value { color: var(--yellow); }
+  /* ── Filter tabs ── */
+  .filter-tabs{display:flex;gap:4px;}
+  .filter-tab{padding:5px 12px;border-radius:6px;font-size:12px;cursor:pointer;background:transparent;border:1px solid var(--border);color:var(--muted);font-family:inherit;transition:all .15s;}
+  .filter-tab.active{background:var(--accent);color:#fff;border-color:var(--accent);}
 
-  /* Table */
-  .table-wrap {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    overflow: hidden;
-  }
-  .table-header {
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 16px 20px;
-    border-bottom: 1px solid var(--border);
-  }
-  .table-title { font-size: 14px; font-weight: 600; }
+  /* ── Form sections ── */
+  .form-section{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);max-width:520px;}
+  .form-section-header{padding:16px 20px;border-bottom:1px solid var(--border);}
+  .form-section-body{padding:24px;}
 
-  .search-box {
-    display: flex; gap: 8px; align-items: center;
-  }
-  .search-input {
-    background: var(--bg);
-    border: 1px solid var(--border);
-    border-radius: 7px;
-    color: var(--text);
-    padding: 7px 12px;
-    font-size: 13px;
-    font-family: inherit;
-    outline: none;
-    width: 200px;
-    transition: border-color 0.15s;
-  }
-  .search-input:focus { border-color: var(--accent); }
+  /* ── Empty / Loading ── */
+  .empty{padding:48px;text-align:center;color:var(--muted);font-size:13px;}
+  .empty-icon{font-size:36px;margin-bottom:10px;opacity:.4;}
+  .loading{display:inline-block;width:14px;height:14px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .6s linear infinite;margin-right:6px;}
+  @keyframes spin{to{transform:rotate(360deg)}}
 
-  table { width: 100%; border-collapse: collapse; }
-  thead tr { background: var(--surface2); }
-  th { padding: 11px 16px; text-align: left; font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.6px; border-bottom: 1px solid var(--border); }
-  td { padding: 12px 16px; font-size: 13px; border-bottom: 1px solid var(--border); }
-  tbody tr:last-child td { border-bottom: none; }
-  tbody tr:hover td { background: var(--surface2); }
-
-  .badge {
-    display: inline-flex; align-items: center;
-    padding: 3px 9px; border-radius: 20px;
-    font-size: 11px; font-weight: 600;
-  }
-  .badge-in { background: rgba(34,197,94,0.12); color: var(--green); }
-  .badge-out { background: rgba(239,68,68,0.12); color: var(--red); }
-  .badge-ok { background: rgba(59,130,246,0.12); color: var(--accent); }
-  .badge-low { background: rgba(245,158,11,0.12); color: var(--yellow); }
-  .badge-zero { background: rgba(239,68,68,0.12); color: var(--red); }
-
-  /* Buttons */
-  .btn {
-    padding: 8px 16px; border-radius: 7px;
-    font-size: 13px; font-family: inherit; font-weight: 500;
-    cursor: pointer; border: none; transition: all 0.15s;
-    display: inline-flex; align-items: center; gap: 6px;
-  }
-  .btn-primary { background: var(--accent); color: #fff; }
-  .btn-primary:hover { background: #2563eb; box-shadow: 0 0 12px var(--accent-glow); }
-  .btn-outline { background: transparent; color: var(--muted); border: 1px solid var(--border); }
-  .btn-outline:hover { color: var(--text); border-color: var(--accent); }
-  .btn-danger { background: rgba(239,68,68,0.1); color: var(--red); border: 1px solid rgba(239,68,68,0.2); }
-  .btn-danger:hover { background: rgba(239,68,68,0.2); }
-  .btn-green { background: rgba(34,197,94,0.1); color: var(--green); border: 1px solid rgba(34,197,94,0.2); }
-  .btn-green:hover { background: rgba(34,197,94,0.2); }
-  .btn-sm { padding: 5px 10px; font-size: 12px; }
-
-  /* Modal */
-  .modal-overlay {
-    display: none; position: fixed; inset: 0;
-    background: rgba(0,0,0,0.7); backdrop-filter: blur(4px);
-    z-index: 200; align-items: center; justify-content: center;
-  }
-  .modal-overlay.open { display: flex; }
-  .modal {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 14px;
-    padding: 28px;
-    width: 460px;
-    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
-    animation: modalIn 0.2s ease;
-  }
-  @keyframes modalIn { from { transform: translateY(-12px); opacity: 0; } to { transform: none; opacity: 1; } }
-
-  .modal-title { font-size: 16px; font-weight: 700; margin-bottom: 20px; }
-  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
-  .form-group { display: flex; flex-direction: column; gap: 6px; }
-  .form-group.full { grid-column: 1 / -1; }
-  label { font-size: 12px; color: var(--muted); font-weight: 500; }
-  input, select, textarea {
-    background: var(--bg); border: 1px solid var(--border);
-    border-radius: 7px; color: var(--text);
-    padding: 9px 12px; font-size: 13px; font-family: inherit;
-    outline: none; transition: border-color 0.15s;
-  }
-  input:focus, select:focus, textarea:focus { border-color: var(--accent); }
-  select option { background: var(--surface2); }
-  textarea { resize: vertical; min-height: 70px; }
-
-  .modal-footer { display: flex; gap: 10px; justify-content: flex-end; margin-top: 22px; }
-
-  /* Toast */
-  #toast {
-    position: fixed; bottom: 24px; right: 24px;
-    background: var(--surface2); border: 1px solid var(--border);
-    border-radius: 9px; padding: 12px 18px;
-    font-size: 13px; z-index: 999;
-    opacity: 0; transform: translateY(8px);
-    transition: all 0.3s; pointer-events: none;
-  }
-  #toast.show { opacity: 1; transform: none; }
-  #toast.success { border-color: var(--green); color: var(--green); }
-  #toast.error { border-color: var(--red); color: var(--red); }
-
-  /* Chart bars */
-  .chart-wrap {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 20px;
-    margin-bottom: 20px;
-  }
-  .chart-title { font-size: 13px; font-weight: 600; margin-bottom: 16px; color: var(--muted); }
-  .bar-chart { display: flex; gap: 6px; align-items: flex-end; height: 100px; }
-  .bar-col { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; }
-  .bar {
-    width: 100%; border-radius: 4px 4px 0 0;
-    transition: height 0.4s ease;
-    min-height: 2px;
-    position: relative;
-  }
-  .bar:hover { filter: brightness(1.2); }
-  .bar-label { font-size: 10px; color: var(--muted); }
-
-  /* Low stock section */
-  .low-stock-list { display: flex; flex-direction: column; gap: 8px; padding: 0 20px 16px; }
-  .low-item {
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 10px 14px;
-    background: rgba(245,158,11,0.05);
-    border: 1px solid rgba(245,158,11,0.15);
-    border-radius: 7px;
-  }
-  .low-item-name { font-size: 13px; font-weight: 500; }
-  .low-item-qty { font-family: 'JetBrains Mono'; font-size: 13px; color: var(--yellow); }
-
-  /* Empty state */
-  .empty {
-    padding: 48px;
-    text-align: center;
-    color: var(--muted);
-    font-size: 13px;
-  }
-  .empty-icon { font-size: 36px; margin-bottom: 10px; opacity: 0.4; }
-
-  /* History type filter */
-  .filter-tabs { display: flex; gap: 4px; }
-  .filter-tab {
-    padding: 5px 12px; border-radius: 6px;
-    font-size: 12px; cursor: pointer;
-    background: transparent; border: 1px solid var(--border);
-    color: var(--muted); font-family: inherit; transition: all 0.15s;
-  }
-  .filter-tab.active { background: var(--accent); color: #fff; border-color: var(--accent); }
-
-  .mono { font-family: 'JetBrains Mono', monospace; }
+  .mono{font-family:'JetBrains Mono',monospace;}
 </style>
 </head>
 <body>
@@ -299,81 +146,46 @@
   <div class="logo">
     <div class="logo-icon">📦</div>
     <h1>재고관리 시스템</h1>
-    <p>Inventory Manager v1.0</p>
+    <p>Firebase Realtime DB</p>
   </div>
-  <div class="nav-item active" data-page="dashboard">
-    <span class="nav-icon">▦</span> 대시보드
-  </div>
-  <div class="nav-item" data-page="items">
-    <span class="nav-icon">◈</span> 품목 관리
-  </div>
-  <div class="nav-item" data-page="inbound">
-    <span class="nav-icon">↑</span> 입고 등록
-  </div>
-  <div class="nav-item" data-page="outbound">
-    <span class="nav-icon">↓</span> 출고 등록
-  </div>
-  <div class="nav-item" data-page="history">
-    <span class="nav-icon">≡</span> 이력 조회
+  <div class="nav-item active" data-page="dashboard"><span>▦</span> 대시보드</div>
+  <div class="nav-item" data-page="items"><span>◈</span> 품목 관리</div>
+  <div class="nav-item" data-page="inbound"><span>↑</span> 입고 등록</div>
+  <div class="nav-item" data-page="outbound"><span>↓</span> 출고 등록</div>
+  <div class="nav-item" data-page="history"><span>≡</span> 이력 조회</div>
+  <div class="db-status" id="db-status">
+    <div class="db-dot" id="db-dot"></div>
+    <span id="db-label">연결 중...</span>
   </div>
 </nav>
 
 <!-- Main -->
 <main class="main">
 
-  <!-- ── 대시보드 ── -->
+  <!-- 대시보드 -->
   <div class="page active" id="page-dashboard">
     <div class="page-header">
       <div class="page-title">대시보드 <span id="dash-date"></span></div>
       <button class="btn btn-outline" onclick="exportExcel()">⬇ 엑셀 내보내기</button>
     </div>
-
     <div class="cards">
-      <div class="card blue">
-        <div class="card-label">전체 품목 수</div>
-        <div class="card-value" id="stat-total">0</div>
-        <div class="card-sub">등록된 품목</div>
-      </div>
-      <div class="card green">
-        <div class="card-label">총 재고 수량</div>
-        <div class="card-value" id="stat-qty">0</div>
-        <div class="card-sub">전체 합계</div>
-      </div>
-      <div class="card yellow">
-        <div class="card-label">저재고 품목</div>
-        <div class="card-value" id="stat-low">0</div>
-        <div class="card-sub">최소수량 미달</div>
-      </div>
-      <div class="card red">
-        <div class="card-label">재고 없음</div>
-        <div class="card-value" id="stat-zero">0</div>
-        <div class="card-sub">수량 0 품목</div>
-      </div>
+      <div class="card blue"><div class="card-label">전체 품목 수</div><div class="card-value" id="stat-total">-</div><div class="card-sub">등록된 품목</div></div>
+      <div class="card green"><div class="card-label">총 재고 수량</div><div class="card-value" id="stat-qty">-</div><div class="card-sub">전체 합계</div></div>
+      <div class="card yellow"><div class="card-label">저재고 품목</div><div class="card-value" id="stat-low">-</div><div class="card-sub">최소수량 미달</div></div>
+      <div class="card red"><div class="card-label">재고 없음</div><div class="card-value" id="stat-zero">-</div><div class="card-sub">수량 0 품목</div></div>
     </div>
-
-    <!-- 저재고 경보 -->
-    <div class="table-wrap" style="margin-bottom:20px;" id="low-stock-wrap">
-      <div class="table-header">
-        <div class="table-title">⚠ 저재고 경보</div>
-      </div>
-      <div class="low-stock-list" id="low-stock-list"></div>
+    <div class="table-wrap" style="margin-bottom:20px;">
+      <div class="table-header"><div class="table-title">⚠ 저재고 경보</div></div>
+      <div class="low-stock-list" id="low-stock-list"><div class="empty"><div class="empty-icon">⏳</div>로딩 중...</div></div>
     </div>
-
-    <!-- 최근 이력 -->
     <div class="table-wrap">
-      <div class="table-header">
-        <div class="table-title">최근 입출고 이력</div>
-      </div>
-      <table>
-        <thead><tr>
-          <th>일시</th><th>품목명</th><th>구분</th><th>수량</th><th>메모</th>
-        </tr></thead>
-        <tbody id="recent-tbody"></tbody>
-      </table>
+      <div class="table-header"><div class="table-title">최근 입출고 이력</div></div>
+      <table><thead><tr><th>일시</th><th>품목명</th><th>구분</th><th>수량</th><th>메모</th></tr></thead>
+      <tbody id="recent-tbody"><tr><td colspan="5"><div class="empty"><div class="empty-icon">⏳</div>로딩 중...</div></td></tr></tbody></table>
     </div>
   </div>
 
-  <!-- ── 품목 관리 ── -->
+  <!-- 품목 관리 -->
   <div class="page" id="page-items">
     <div class="page-header">
       <div class="page-title">품목 관리</div>
@@ -385,90 +197,52 @@
     <div class="table-wrap">
       <div class="table-header">
         <div class="table-title">전체 품목</div>
-        <div class="search-box">
-          <input type="text" class="search-input" id="item-search" placeholder="품목명 검색..." oninput="renderItems()">
-        </div>
+        <input type="text" class="search-input" id="item-search" placeholder="품목명 검색..." oninput="renderItems()">
       </div>
-      <table>
-        <thead><tr>
-          <th>품목코드</th><th>품목명</th><th>카테고리</th><th>현재 수량</th><th>단위</th><th>최소수량</th><th>상태</th><th>관리</th>
-        </tr></thead>
-        <tbody id="items-tbody"></tbody>
-      </table>
+      <table><thead><tr><th>품목코드</th><th>품목명</th><th>카테고리</th><th>현재 수량</th><th>단위</th><th>최소수량</th><th>상태</th><th>관리</th></tr></thead>
+      <tbody id="items-tbody"><tr><td colspan="8"><div class="empty"><div class="empty-icon">⏳</div>로딩 중...</div></td></tr></tbody></table>
     </div>
   </div>
 
-  <!-- ── 입고 등록 ── -->
+  <!-- 입고 등록 -->
   <div class="page" id="page-inbound">
-    <div class="page-header">
-      <div class="page-title">입고 등록</div>
-    </div>
-    <div class="table-wrap" style="max-width:520px;">
-      <div class="table-header"><div class="table-title">입고 정보 입력</div></div>
-      <div style="padding:24px;">
+    <div class="page-header"><div class="page-title">입고 등록</div></div>
+    <div class="form-section">
+      <div class="form-section-header"><div class="table-title">입고 정보 입력</div></div>
+      <div class="form-section-body">
         <div class="form-grid">
-          <div class="form-group full">
-            <label>품목 선택</label>
-            <select id="in-item">
-              <option value="">-- 품목을 선택하세요 --</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label>입고 수량</label>
-            <input type="number" id="in-qty" min="1" placeholder="0">
-          </div>
-          <div class="form-group">
-            <label>입고일자</label>
-            <input type="date" id="in-date">
-          </div>
-          <div class="form-group full">
-            <label>메모</label>
-            <textarea id="in-memo" placeholder="입고 관련 메모 (선택)"></textarea>
-          </div>
+          <div class="form-group full"><label>품목 선택</label><select id="in-item"><option value="">-- 품목을 선택하세요 --</option></select></div>
+          <div class="form-group"><label>입고 수량</label><input type="number" id="in-qty" min="1" placeholder="0"></div>
+          <div class="form-group"><label>입고일자</label><input type="date" id="in-date"></div>
+          <div class="form-group full"><label>메모</label><textarea id="in-memo" placeholder="입고 관련 메모 (선택)"></textarea></div>
         </div>
-        <div style="margin-top:20px; display:flex; justify-content:flex-end;">
-          <button class="btn btn-green" onclick="doInbound()">↑ 입고 처리</button>
+        <div style="margin-top:20px;display:flex;justify-content:flex-end;">
+          <button class="btn btn-green" id="btn-inbound" onclick="doInbound()">↑ 입고 처리</button>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- ── 출고 등록 ── -->
+  <!-- 출고 등록 -->
   <div class="page" id="page-outbound">
-    <div class="page-header">
-      <div class="page-title">출고 등록</div>
-    </div>
-    <div class="table-wrap" style="max-width:520px;">
-      <div class="table-header"><div class="table-title">출고 정보 입력</div></div>
-      <div style="padding:24px;">
+    <div class="page-header"><div class="page-title">출고 등록</div></div>
+    <div class="form-section">
+      <div class="form-section-header"><div class="table-title">출고 정보 입력</div></div>
+      <div class="form-section-body">
         <div class="form-grid">
-          <div class="form-group full">
-            <label>품목 선택</label>
-            <select id="out-item">
-              <option value="">-- 품목을 선택하세요 --</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label>출고 수량</label>
-            <input type="number" id="out-qty" min="1" placeholder="0">
-          </div>
-          <div class="form-group">
-            <label>출고일자</label>
-            <input type="date" id="out-date">
-          </div>
-          <div class="form-group full">
-            <label>메모</label>
-            <textarea id="out-memo" placeholder="출고 관련 메모 (선택)"></textarea>
-          </div>
+          <div class="form-group full"><label>품목 선택</label><select id="out-item"><option value="">-- 품목을 선택하세요 --</option></select></div>
+          <div class="form-group"><label>출고 수량</label><input type="number" id="out-qty" min="1" placeholder="0"></div>
+          <div class="form-group"><label>출고일자</label><input type="date" id="out-date"></div>
+          <div class="form-group full"><label>메모</label><textarea id="out-memo" placeholder="출고 관련 메모 (선택)"></textarea></div>
         </div>
-        <div style="margin-top:20px; display:flex; justify-content:flex-end;">
-          <button class="btn btn-danger" onclick="doOutbound()">↓ 출고 처리</button>
+        <div style="margin-top:20px;display:flex;justify-content:flex-end;">
+          <button class="btn btn-danger" id="btn-outbound" onclick="doOutbound()">↓ 출고 처리</button>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- ── 이력 조회 ── -->
+  <!-- 이력 조회 -->
   <div class="page" id="page-history">
     <div class="page-header">
       <div class="page-title">입출고 이력</div>
@@ -486,166 +260,185 @@
           <input type="text" class="search-input" id="hist-search" placeholder="품목명 검색..." oninput="renderHistory()">
         </div>
       </div>
-      <table>
-        <thead><tr>
-          <th>일시</th><th>품목명</th><th>구분</th><th>수량</th><th>처리 후 재고</th><th>메모</th>
-        </tr></thead>
-        <tbody id="history-tbody"></tbody>
-      </table>
+      <table><thead><tr><th>일시</th><th>품목명</th><th>구분</th><th>수량</th><th>처리 후 재고</th><th>메모</th></tr></thead>
+      <tbody id="history-tbody"><tr><td colspan="6"><div class="empty"><div class="empty-icon">⏳</div>로딩 중...</div></td></tr></tbody></table>
     </div>
   </div>
 
 </main>
 
-<!-- ── 품목 추가 모달 ── -->
+<!-- 품목 추가/편집 모달 -->
 <div class="modal-overlay" id="modal-item">
   <div class="modal">
     <div class="modal-title" id="modal-item-title">품목 추가</div>
     <div class="form-grid">
-      <div class="form-group">
-        <label>품목코드</label>
-        <input type="text" id="m-code" placeholder="예: P001">
-      </div>
-      <div class="form-group">
-        <label>품목명 *</label>
-        <input type="text" id="m-name" placeholder="품목명 입력">
-      </div>
-      <div class="form-group">
-        <label>카테고리</label>
-        <input type="text" id="m-cat" placeholder="예: 소모품">
-      </div>
-      <div class="form-group">
-        <label>단위</label>
-        <input type="text" id="m-unit" placeholder="예: 개, kg, L">
-      </div>
-      <div class="form-group">
-        <label>초기 수량</label>
-        <input type="number" id="m-qty" min="0" value="0">
-      </div>
-      <div class="form-group">
-        <label>최소 수량 (저재고 기준)</label>
-        <input type="number" id="m-min" min="0" value="5">
-      </div>
-      <div class="form-group full">
-        <label>메모</label>
-        <textarea id="m-memo" placeholder="품목 설명 (선택)"></textarea>
-      </div>
+      <div class="form-group"><label>품목코드</label><input type="text" id="m-code" placeholder="예: P001"></div>
+      <div class="form-group"><label>품목명 *</label><input type="text" id="m-name" placeholder="품목명 입력"></div>
+      <div class="form-group"><label>카테고리</label><input type="text" id="m-cat" placeholder="예: 소모품"></div>
+      <div class="form-group"><label>단위</label><input type="text" id="m-unit" placeholder="예: 개, kg, L"></div>
+      <div class="form-group"><label>초기 수량</label><input type="number" id="m-qty" min="0" value="0"></div>
+      <div class="form-group"><label>최소 수량 (저재고 기준)</label><input type="number" id="m-min" min="0" value="5"></div>
+      <div class="form-group full"><label>메모</label><textarea id="m-memo" placeholder="품목 설명 (선택)"></textarea></div>
     </div>
     <div class="modal-footer">
       <button class="btn btn-outline" onclick="closeModal()">취소</button>
-      <button class="btn btn-primary" onclick="saveItem()">저장</button>
+      <button class="btn btn-primary" id="btn-save-item" onclick="saveItem()">저장</button>
     </div>
   </div>
 </div>
 
 <div id="toast"></div>
 
-<script>
-// ── Storage ──────────────────────────────────
-const ITEMS_KEY = 'inv_items';
-const HIST_KEY  = 'inv_history';
+<!-- Firebase SDK -->
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import {
+  getFirestore, collection, doc,
+  getDocs, getDoc, addDoc, setDoc, updateDoc, deleteDoc,
+  query, orderBy, limit, onSnapshot, serverTimestamp
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-function loadItems() { return JSON.parse(localStorage.getItem(ITEMS_KEY) || '[]'); }
-function saveItems(d) { localStorage.setItem(ITEMS_KEY, JSON.stringify(d)); }
-function loadHistory() { return JSON.parse(localStorage.getItem(HIST_KEY) || '[]'); }
-function saveHistory(d) { localStorage.setItem(HIST_KEY, JSON.stringify(d)); }
+// ── Firebase 설정 ──────────────────────────────
+const firebaseConfig = {
+  apiKey: "AIzaSyDDj55CsTYp3QllAaSzAw7KWUtjgXoj0VM",
+  authDomain: "inventory-r1.firebaseapp.com",
+  projectId: "inventory-r1",
+  storageBucket: "inventory-r1.firebasestorage.app",
+  messagingSenderId: "741635006076",
+  appId: "1:741635006076:web:090b595e2753b1daa573f9"
+};
 
-// ── Nav ──────────────────────────────────────
-let currentPage = 'dashboard';
+const app = initializeApp(firebaseConfig);
+const db  = getFirestore(app);
+
+// ── 전역 캐시 ──────────────────────────────────
+let itemsCache   = [];
+let historyCache = [];
+
+// ── DB 상태 표시 ───────────────────────────────
+function setDbStatus(state) {
+  const dot   = document.getElementById('db-dot');
+  const label = document.getElementById('db-label');
+  if (state === 'connected') {
+    dot.className = 'db-dot connected';
+    label.textContent = 'Firebase 연결됨';
+  } else if (state === 'error') {
+    dot.className = 'db-dot error';
+    label.textContent = '연결 오류';
+  } else {
+    dot.className = 'db-dot';
+    label.textContent = '연결 중...';
+  }
+}
+
+// ── 실시간 리스너 ──────────────────────────────
+function startListeners() {
+  // Items 실시간 구독
+  const itemsQ = query(collection(db, 'items'), orderBy('createdAt', 'asc'));
+  onSnapshot(itemsQ, snap => {
+    itemsCache = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    setDbStatus('connected');
+    renderItems();
+    fillItemSelects();
+    if (document.getElementById('page-dashboard').classList.contains('active')) {
+      renderDashboard();
+    }
+  }, err => {
+    console.error(err);
+    setDbStatus('error');
+    toast('DB 연결 오류: ' + err.message, 'error');
+  });
+
+  // History 실시간 구독
+  const histQ = query(collection(db, 'history'), orderBy('createdAt', 'desc'));
+  onSnapshot(histQ, snap => {
+    historyCache = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    renderHistory();
+    renderRecentHistory();
+  });
+}
+
+// ── Navigation ─────────────────────────────────
 document.querySelectorAll('.nav-item').forEach(el => {
   el.addEventListener('click', () => {
     document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
     document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
     el.classList.add('active');
-    currentPage = el.dataset.page;
-    document.getElementById('page-' + currentPage).classList.add('active');
-    if (currentPage === 'dashboard') renderDashboard();
-    if (currentPage === 'items') renderItems();
-    if (currentPage === 'inbound' || currentPage === 'outbound') fillItemSelects();
-    if (currentPage === 'history') renderHistory();
+    const page = el.dataset.page;
+    document.getElementById('page-' + page).classList.add('active');
+    if (page === 'dashboard') renderDashboard();
+    if (page === 'items') renderItems();
+    if (page === 'inbound' || page === 'outbound') fillItemSelects();
+    if (page === 'history') renderHistory();
   });
 });
 
-// ── Toast ─────────────────────────────────────
-function toast(msg, type='success') {
-  const t = document.getElementById('toast');
-  t.textContent = msg;
-  t.className = 'show ' + type;
-  setTimeout(() => { t.className = ''; }, 2600);
-}
-
-// ── Dashboard ─────────────────────────────────
-function renderDashboard() {
-  const items = loadItems();
-  const hist  = loadHistory();
-
+// ── Dashboard ──────────────────────────────────
+window.renderDashboard = function() {
+  const items = itemsCache;
   document.getElementById('stat-total').textContent = items.length;
-  document.getElementById('stat-qty').textContent   = items.reduce((s,i)=>s+i.qty,0);
-  const low  = items.filter(i => i.qty > 0 && i.qty <= i.minQty);
-  const zero = items.filter(i => i.qty === 0);
-  document.getElementById('stat-low').textContent  = low.length;
-  document.getElementById('stat-zero').textContent = zero.length;
+  document.getElementById('stat-qty').textContent   = items.reduce((s,i) => s + (i.qty||0), 0);
+  document.getElementById('stat-low').textContent   = items.filter(i => i.qty > 0 && i.qty <= i.minQty).length;
+  document.getElementById('stat-zero').textContent  = items.filter(i => i.qty === 0).length;
+  document.getElementById('dash-date').textContent  =
+    new Date().toLocaleDateString('ko-KR', {year:'numeric',month:'long',day:'numeric'});
 
-  const now = new Date();
-  document.getElementById('dash-date').textContent =
-    now.toLocaleDateString('ko-KR', {year:'numeric',month:'long',day:'numeric'});
-
-  // Low stock
+  // 저재고 목록
+  const lowAll = items.filter(i => i.qty <= i.minQty);
   const ll = document.getElementById('low-stock-list');
-  const all_low = [...zero, ...low];
-  if (all_low.length === 0) {
-    ll.innerHTML = '<div class="empty"><div class="empty-icon">✓</div>저재고 품목 없음</div>';
-  } else {
-    ll.innerHTML = all_low.map(i => `
+  ll.innerHTML = lowAll.length === 0
+    ? '<div class="empty"><div class="empty-icon">✓</div>저재고 품목 없음</div>'
+    : lowAll.map(i => `
       <div class="low-item">
         <div>
           <div class="low-item-name">${i.name}</div>
-          <div style="font-size:11px;color:var(--muted);">${i.code || ''} · ${i.category || '미분류'}</div>
+          <div style="font-size:11px;color:var(--muted)">${i.code||''} · ${i.category||'미분류'}</div>
         </div>
-        <div class="low-item-qty">${i.qty} ${i.unit || '개'} <span style="color:var(--muted);font-size:11px;">/ 최소 ${i.minQty}</span></div>
+        <div class="low-item-qty">${i.qty} ${i.unit||'개'} <span style="color:var(--muted);font-size:11px">/ 최소 ${i.minQty}</span></div>
       </div>`).join('');
-  }
+  renderRecentHistory();
+}
 
-  // Recent history (last 10)
-  const recent = [...hist].reverse().slice(0, 10);
+function renderRecentHistory() {
+  const recent = historyCache.slice(0, 10);
   const tb = document.getElementById('recent-tbody');
   if (recent.length === 0) {
     tb.innerHTML = '<tr><td colspan="5"><div class="empty"><div class="empty-icon">📋</div>이력 없음</div></td></tr>';
-  } else {
-    tb.innerHTML = recent.map(h => `
-      <tr>
-        <td class="mono" style="font-size:12px;">${fmtDate(h.date)}</td>
-        <td>${h.itemName}</td>
-        <td><span class="badge ${h.type==='in'?'badge-in':'badge-out'}">${h.type==='in'?'입고':'출고'}</span></td>
-        <td class="mono">${h.type==='in'?'+':'-'}${h.qty}</td>
-        <td style="color:var(--muted);font-size:12px;">${h.memo||'-'}</td>
-      </tr>`).join('');
+    return;
   }
+  tb.innerHTML = recent.map(h => `
+    <tr>
+      <td class="mono" style="font-size:12px">${h.date||'-'}</td>
+      <td>${h.itemName}</td>
+      <td><span class="badge ${h.type==='in'?'badge-in':'badge-out'}">${h.type==='in'?'입고':'출고'}</span></td>
+      <td class="mono">${h.type==='in'?'+':'-'}${h.qty}</td>
+      <td style="color:var(--muted);font-size:12px">${h.memo||'-'}</td>
+    </tr>`).join('');
 }
 
-// ── Items ─────────────────────────────────────
-function renderItems() {
-  const items = loadItems();
-  const q = (document.getElementById('item-search')?.value||'').toLowerCase();
-  const filtered = items.filter(i => i.name.toLowerCase().includes(q));
-  const tb = document.getElementById('items-tbody');
+// ── Items ──────────────────────────────────────
+window.renderItems = function() {
+  const q        = (document.getElementById('item-search')?.value||'').toLowerCase();
+  const filtered = itemsCache.filter(i => i.name.toLowerCase().includes(q));
+  const tb       = document.getElementById('items-tbody');
   if (filtered.length === 0) {
     tb.innerHTML = '<tr><td colspan="8"><div class="empty"><div class="empty-icon">📦</div>품목 없음</div></td></tr>';
     return;
   }
   tb.innerHTML = filtered.map(i => {
-    let status = '';
-    if (i.qty === 0) status = '<span class="badge badge-zero">재고없음</span>';
-    else if (i.qty <= i.minQty) status = '<span class="badge badge-low">저재고</span>';
-    else status = '<span class="badge badge-ok">정상</span>';
+    const st = i.qty === 0
+      ? '<span class="badge badge-zero">재고없음</span>'
+      : i.qty <= i.minQty
+        ? '<span class="badge badge-low">저재고</span>'
+        : '<span class="badge badge-ok">정상</span>';
     return `<tr>
-      <td class="mono" style="font-size:12px;">${i.code||'-'}</td>
-      <td style="font-weight:500;">${i.name}</td>
+      <td class="mono" style="font-size:12px">${i.code||'-'}</td>
+      <td style="font-weight:500">${i.name}</td>
       <td>${i.category||'-'}</td>
-      <td class="mono" style="font-size:14px;font-weight:600;">${i.qty}</td>
+      <td class="mono" style="font-size:14px;font-weight:600">${i.qty}</td>
       <td>${i.unit||'개'}</td>
       <td class="mono">${i.minQty}</td>
-      <td>${status}</td>
+      <td>${st}</td>
       <td>
         <button class="btn btn-outline btn-sm" onclick="openEditItem('${i.id}')">편집</button>
         <button class="btn btn-danger btn-sm" onclick="deleteItem('${i.id}')">삭제</button>
@@ -654,9 +447,10 @@ function renderItems() {
   }).join('');
 }
 
-// ── Add/Edit Item Modal ───────────────────────
+// ── Add / Edit Modal ───────────────────────────
 let editingId = null;
-function openAddItem() {
+
+window.openAddItem = function() {
   editingId = null;
   document.getElementById('modal-item-title').textContent = '품목 추가';
   ['m-code','m-name','m-cat','m-unit','m-memo'].forEach(id => document.getElementById(id).value = '');
@@ -664,9 +458,9 @@ function openAddItem() {
   document.getElementById('m-min').value = 5;
   document.getElementById('modal-item').classList.add('open');
 }
-function openEditItem(id) {
-  const items = loadItems();
-  const item = items.find(i => i.id === id);
+
+window.openEditItem = function(id) {
+  const item = itemsCache.find(i => i.id === id);
   if (!item) return;
   editingId = id;
   document.getElementById('modal-item-title').textContent = '품목 편집';
@@ -679,121 +473,140 @@ function openEditItem(id) {
   document.getElementById('m-memo').value = item.memo||'';
   document.getElementById('modal-item').classList.add('open');
 }
-function closeModal() {
+
+window.closeModal = function() {
   document.getElementById('modal-item').classList.remove('open');
 }
-function saveItem() {
+
+window.saveItem = async function() {
   const name = document.getElementById('m-name').value.trim();
   if (!name) { toast('품목명을 입력하세요', 'error'); return; }
-  const items = loadItems();
-  if (editingId) {
-    const idx = items.findIndex(i => i.id === editingId);
-    items[idx] = { ...items[idx],
-      code: document.getElementById('m-code').value.trim(),
+  const btn = document.getElementById('btn-save-item');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="loading"></span>저장 중...';
+  try {
+    const data = {
+      code:     document.getElementById('m-code').value.trim(),
       name,
       category: document.getElementById('m-cat').value.trim(),
-      unit: document.getElementById('m-unit').value.trim(),
-      qty: parseInt(document.getElementById('m-qty').value)||0,
-      minQty: parseInt(document.getElementById('m-min').value)||0,
-      memo: document.getElementById('m-memo').value.trim(),
+      unit:     document.getElementById('m-unit').value.trim(),
+      qty:      parseInt(document.getElementById('m-qty').value)||0,
+      minQty:   parseInt(document.getElementById('m-min').value)||0,
+      memo:     document.getElementById('m-memo').value.trim(),
     };
-    toast('품목이 수정되었습니다');
-  } else {
-    items.push({
-      id: 'item_' + Date.now(),
-      code: document.getElementById('m-code').value.trim(),
-      name,
-      category: document.getElementById('m-cat').value.trim(),
-      unit: document.getElementById('m-unit').value.trim(),
-      qty: parseInt(document.getElementById('m-qty').value)||0,
-      minQty: parseInt(document.getElementById('m-min').value)||0,
-      memo: document.getElementById('m-memo').value.trim(),
-      createdAt: new Date().toISOString(),
-    });
-    toast('품목이 추가되었습니다');
+    if (editingId) {
+      await updateDoc(doc(db, 'items', editingId), data);
+      toast('품목이 수정되었습니다');
+    } else {
+      data.createdAt = serverTimestamp();
+      await addDoc(collection(db, 'items'), data);
+      toast('품목이 추가되었습니다');
+    }
+    closeModal();
+  } catch(e) {
+    toast('저장 실패: ' + e.message, 'error');
   }
-  saveItems(items);
-  closeModal();
-  renderItems();
-}
-function deleteItem(id) {
-  if (!confirm('이 품목을 삭제하시겠습니까?')) return;
-  const items = loadItems().filter(i => i.id !== id);
-  saveItems(items);
-  renderItems();
-  toast('품목이 삭제되었습니다');
+  btn.disabled = false;
+  btn.textContent = '저장';
 }
 
-// ── Selects ───────────────────────────────────
-function fillItemSelects() {
-  const items = loadItems();
+window.deleteItem = async function(id) {
+  if (!confirm('이 품목을 삭제하시겠습니까?')) return;
+  try {
+    await deleteDoc(doc(db, 'items', id));
+    toast('품목이 삭제되었습니다');
+  } catch(e) {
+    toast('삭제 실패: ' + e.message, 'error');
+  }
+}
+
+// ── Item Selects ───────────────────────────────
+window.fillItemSelects = function() {
   const opts = '<option value="">-- 품목을 선택하세요 --</option>' +
-    items.map(i => `<option value="${i.id}">${i.name} (현재: ${i.qty} ${i.unit||'개'})</option>`).join('');
-  document.getElementById('in-item').innerHTML = opts;
+    itemsCache.map(i => `<option value="${i.id}">${i.name} (현재: ${i.qty} ${i.unit||'개'})</option>`).join('');
+  document.getElementById('in-item').innerHTML  = opts;
   document.getElementById('out-item').innerHTML = opts;
   const today = new Date().toISOString().slice(0,10);
-  document.getElementById('in-date').value = today;
-  document.getElementById('out-date').value = today;
+  if (!document.getElementById('in-date').value)  document.getElementById('in-date').value  = today;
+  if (!document.getElementById('out-date').value) document.getElementById('out-date').value = today;
 }
 
-// ── Inbound ───────────────────────────────────
-function doInbound() {
+// ── Inbound ────────────────────────────────────
+window.doInbound = async function() {
   const itemId = document.getElementById('in-item').value;
   const qty    = parseInt(document.getElementById('in-qty').value);
   const date   = document.getElementById('in-date').value;
   const memo   = document.getElementById('in-memo').value.trim();
   if (!itemId) { toast('품목을 선택하세요', 'error'); return; }
   if (!qty || qty < 1) { toast('수량을 올바르게 입력하세요', 'error'); return; }
-  const items = loadItems();
-  const idx = items.findIndex(i => i.id === itemId);
-  items[idx].qty += qty;
-  saveItems(items);
-  const h = loadHistory();
-  h.push({ id:'h_'+Date.now(), type:'in', itemId, itemName:items[idx].name,
-    qty, afterQty: items[idx].qty, date: date||new Date().toISOString().slice(0,10), memo });
-  saveHistory(h);
-  document.getElementById('in-qty').value = '';
-  document.getElementById('in-memo').value = '';
-  toast(`입고 완료: ${items[idx].name} +${qty}`);
-  fillItemSelects();
+
+  const btn = document.getElementById('btn-inbound');
+  btn.disabled = true; btn.innerHTML = '<span class="loading"></span>처리 중...';
+
+  try {
+    const item   = itemsCache.find(i => i.id === itemId);
+    const newQty = (item.qty||0) + qty;
+    await updateDoc(doc(db, 'items', itemId), { qty: newQty });
+    await addDoc(collection(db, 'history'), {
+      type:'in', itemId, itemName:item.name,
+      qty, afterQty:newQty,
+      date: date||new Date().toISOString().slice(0,10),
+      memo, createdAt: serverTimestamp()
+    });
+    document.getElementById('in-qty').value  = '';
+    document.getElementById('in-memo').value = '';
+    toast(`입고 완료: ${item.name} +${qty}`);
+  } catch(e) {
+    toast('입고 처리 실패: ' + e.message, 'error');
+  }
+  btn.disabled = false; btn.innerHTML = '↑ 입고 처리';
 }
 
-// ── Outbound ──────────────────────────────────
-function doOutbound() {
+// ── Outbound ───────────────────────────────────
+window.doOutbound = async function() {
   const itemId = document.getElementById('out-item').value;
   const qty    = parseInt(document.getElementById('out-qty').value);
   const date   = document.getElementById('out-date').value;
   const memo   = document.getElementById('out-memo').value.trim();
   if (!itemId) { toast('품목을 선택하세요', 'error'); return; }
   if (!qty || qty < 1) { toast('수량을 올바르게 입력하세요', 'error'); return; }
-  const items = loadItems();
-  const idx = items.findIndex(i => i.id === itemId);
-  if (items[idx].qty < qty) { toast('재고 수량이 부족합니다', 'error'); return; }
-  items[idx].qty -= qty;
-  saveItems(items);
-  const h = loadHistory();
-  h.push({ id:'h_'+Date.now(), type:'out', itemId, itemName:items[idx].name,
-    qty, afterQty: items[idx].qty, date: date||new Date().toISOString().slice(0,10), memo });
-  saveHistory(h);
-  document.getElementById('out-qty').value = '';
-  document.getElementById('out-memo').value = '';
-  toast(`출고 완료: ${items[idx].name} -${qty}`);
-  fillItemSelects();
+
+  const btn = document.getElementById('btn-outbound');
+  btn.disabled = true; btn.innerHTML = '<span class="loading"></span>처리 중...';
+
+  try {
+    const item = itemsCache.find(i => i.id === itemId);
+    if ((item.qty||0) < qty) { toast('재고 수량이 부족합니다', 'error'); btn.disabled=false; btn.innerHTML='↓ 출고 처리'; return; }
+    const newQty = item.qty - qty;
+    await updateDoc(doc(db, 'items', itemId), { qty: newQty });
+    await addDoc(collection(db, 'history'), {
+      type:'out', itemId, itemName:item.name,
+      qty, afterQty:newQty,
+      date: date||new Date().toISOString().slice(0,10),
+      memo, createdAt: serverTimestamp()
+    });
+    document.getElementById('out-qty').value  = '';
+    document.getElementById('out-memo').value = '';
+    toast(`출고 완료: ${item.name} -${qty}`);
+  } catch(e) {
+    toast('출고 처리 실패: ' + e.message, 'error');
+  }
+  btn.disabled = false; btn.innerHTML = '↓ 출고 처리';
 }
 
-// ── History ───────────────────────────────────
+// ── History ────────────────────────────────────
 let histFilter = 'all';
-function setHistoryFilter(f, el) {
+window.setHistoryFilter = function(f, el) {
   histFilter = f;
   document.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
   el.classList.add('active');
   renderHistory();
 }
-function renderHistory() {
-  let hist = [...loadHistory()].reverse();
-  const q = (document.getElementById('hist-search')?.value||'').toLowerCase();
+window.renderHistory = function() {
+  let hist = historyCache;
+  const q  = (document.getElementById('hist-search')?.value||'').toLowerCase();
   if (histFilter !== 'all') hist = hist.filter(h => h.type === histFilter);
-  if (q) hist = hist.filter(h => h.itemName.toLowerCase().includes(q));
+  if (q) hist = hist.filter(h => h.itemName?.toLowerCase().includes(q));
   const tb = document.getElementById('history-tbody');
   if (hist.length === 0) {
     tb.innerHTML = '<tr><td colspan="6"><div class="empty"><div class="empty-icon">📋</div>이력 없음</div></td></tr>';
@@ -801,68 +614,63 @@ function renderHistory() {
   }
   tb.innerHTML = hist.map(h => `
     <tr>
-      <td class="mono" style="font-size:12px;">${fmtDate(h.date)}</td>
-      <td style="font-weight:500;">${h.itemName}</td>
+      <td class="mono" style="font-size:12px">${h.date||'-'}</td>
+      <td style="font-weight:500">${h.itemName}</td>
       <td><span class="badge ${h.type==='in'?'badge-in':'badge-out'}">${h.type==='in'?'입고':'출고'}</span></td>
-      <td class="mono" style="color:${h.type==='in'?'var(--green)':'var(--red)'}">
-        ${h.type==='in'?'+':'-'}${h.qty}
-      </td>
+      <td class="mono" style="color:${h.type==='in'?'var(--green)':'var(--red)'}">${h.type==='in'?'+':'-'}${h.qty}</td>
       <td class="mono">${h.afterQty??'-'}</td>
-      <td style="color:var(--muted);font-size:12px;">${h.memo||'-'}</td>
+      <td style="color:var(--muted);font-size:12px">${h.memo||'-'}</td>
     </tr>`).join('');
 }
 
-// ── Excel Export ──────────────────────────────
-function exportExcel() {
-  const items = loadItems();
-  if (items.length === 0) { toast('내보낼 품목이 없습니다', 'error'); return; }
+// ── Excel Export ───────────────────────────────
+window.exportExcel = function() {
+  if (itemsCache.length === 0) { toast('내보낼 품목이 없습니다', 'error'); return; }
   const wb = XLSX.utils.book_new();
-
-  // 재고 현황 시트
-  const itemData = [
-    ['품목코드','품목명','카테고리','현재수량','단위','최소수량','상태','메모']
-  ];
-  items.forEach(i => {
-    let st = i.qty===0?'재고없음':i.qty<=i.minQty?'저재고':'정상';
+  const itemData = [['품목코드','품목명','카테고리','현재수량','단위','최소수량','상태','메모']];
+  itemsCache.forEach(i => {
+    const st = i.qty===0?'재고없음':i.qty<=i.minQty?'저재고':'정상';
     itemData.push([i.code||'',i.name,i.category||'',i.qty,i.unit||'개',i.minQty,st,i.memo||'']);
   });
   const ws1 = XLSX.utils.aoa_to_sheet(itemData);
   ws1['!cols'] = [{wch:10},{wch:20},{wch:12},{wch:10},{wch:8},{wch:10},{wch:10},{wch:20}];
   XLSX.utils.book_append_sheet(wb, ws1, '재고현황');
-
-  // 이력 시트
-  const hist = loadHistory();
   const histData = [['일자','품목명','구분','수량','처리후재고','메모']];
-  hist.forEach(h => histData.push([h.date, h.itemName, h.type==='in'?'입고':'출고', h.qty, h.afterQty??'', h.memo||'']));
+  historyCache.forEach(h => histData.push([h.date,h.itemName,h.type==='in'?'입고':'출고',h.qty,h.afterQty??'',h.memo||'']));
   const ws2 = XLSX.utils.aoa_to_sheet(histData);
   ws2['!cols'] = [{wch:12},{wch:20},{wch:6},{wch:8},{wch:10},{wch:20}];
   XLSX.utils.book_append_sheet(wb, ws2, '입출고이력');
-
-  XLSX.writeFile(wb, `재고관리_${today()}.xlsx`);
+  XLSX.writeFile(wb, `재고관리_${todayStr()}.xlsx`);
   toast('엑셀 파일이 저장되었습니다');
 }
-function exportHistoryExcel() {
-  const hist = loadHistory();
-  if (hist.length === 0) { toast('이력이 없습니다', 'error'); return; }
+
+window.exportHistoryExcel = function() {
+  if (historyCache.length === 0) { toast('이력이 없습니다', 'error'); return; }
   const wb = XLSX.utils.book_new();
   const data = [['일자','품목명','구분','수량','처리후재고','메모']];
-  hist.forEach(h => data.push([h.date, h.itemName, h.type==='in'?'입고':'출고', h.qty, h.afterQty??'', h.memo||'']));
+  historyCache.forEach(h => data.push([h.date,h.itemName,h.type==='in'?'입고':'출고',h.qty,h.afterQty??'',h.memo||'']));
   const ws = XLSX.utils.aoa_to_sheet(data);
   ws['!cols'] = [{wch:12},{wch:20},{wch:6},{wch:8},{wch:10},{wch:20}];
   XLSX.utils.book_append_sheet(wb, ws, '입출고이력');
-  XLSX.writeFile(wb, `입출고이력_${today()}.xlsx`);
+  XLSX.writeFile(wb, `입출고이력_${todayStr()}.xlsx`);
   toast('이력 엑셀이 저장되었습니다');
 }
 
-// ── Utils ─────────────────────────────────────
-function fmtDate(d) {
-  if (!d) return '-';
-  return d.replace(/-/g,'/');
+// ── Toast ──────────────────────────────────────
+window.toast = function(msg, type='success') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'show ' + type;
+  setTimeout(() => { t.className = ''; }, 2800);
 }
-function today() { return new Date().toISOString().slice(0,10).replace(/-/g,''); }
 
-// ── Init ──────────────────────────────────────
-renderDashboard();
+function todayStr() { return new Date().toISOString().slice(0,10).replace(/-/g,''); }
+
+// ── Init ───────────────────────────────────────
+const today = new Date().toISOString().slice(0,10);
+document.getElementById('in-date').value  = today;
+document.getElementById('out-date').value = today;
+startListeners();
 </script>
 </body>
 </html>
