@@ -250,6 +250,8 @@
       <div class="page-title">품목 관리</div>
       <div style="display:flex;gap:8px;">
         <button class="btn btn-outline" onclick="exportExcel()">⬇ 엑셀 내보내기</button>
+        <button class="btn btn-outline" onclick="document.getElementById('csv-upload').click()">📂 CSV 일괄등록</button>
+        <input type="file" id="csv-upload" accept=".csv" style="display:none" onchange="handleCsvUpload(event)">
         <button class="btn btn-primary" onclick="openAddItem()">+ 품목 추가</button>
       </div>
     </div>
@@ -258,7 +260,7 @@
         <div class="table-title">전체 품목</div>
         <input type="text" class="search-input" id="item-search" placeholder="품목명 검색..." oninput="renderItems()">
       </div>
-      <table><thead><tr><th>품목코드</th><th>품목명</th><th>카테고리</th><th>현재 수량</th><th>단위</th><th>최소수량</th><th>상태</th><th>관리</th></tr></thead>
+      <table><thead><tr><th>카테고리</th><th>품목명</th><th>품목코드</th><th>주관경</th><th>스케줄</th><th>현재 수량</th><th>최소수량</th><th>상태</th><th>관리</th></tr></thead>
       <tbody id="items-tbody"><tr><td colspan="8"><div class="empty"><div class="empty-icon">⏳</div>로딩 중...</div></td></tr></tbody></table>
     </div>
   </div>
@@ -331,12 +333,13 @@
   <div class="modal">
     <div class="modal-title" id="modal-item-title">품목 추가</div>
     <div class="form-grid">
-      <div class="form-group"><label>품목코드</label><input type="text" id="m-code" placeholder="예: P001"></div>
-      <div class="form-group"><label>품목명 *</label><input type="text" id="m-name" placeholder="품목명 입력"></div>
-      <div class="form-group"><label>카테고리</label><input type="text" id="m-cat" placeholder="예: 소모품"></div>
-      <div class="form-group"><label>단위</label><input type="text" id="m-unit" placeholder="예: 개, kg, L"></div>
+      <div class="form-group full"><label>카테고리</label><input type="text" id="m-cat" placeholder="예: Pipe, FLANGE"></div>
+      <div class="form-group full"><label>품목명 *</label><input type="text" id="m-name" placeholder="예: WELDING NECK, SLIPON,SLEEVE50,SLEEVE100"></div>
+      <div class="form-group"><label>품목코드</label><input type="text" id="m-code" placeholder="예: ANSI, JIS"></div>
+      <div class="form-group"><label>주관경</label><input type="text" id="m-unit" placeholder="예: 25A, 50A, 100A"></div>
+      <div class="form-group"><label>스케줄</label><input type="text" id="m-schedule" placeholder="예: SCH40, SCH80"></div>
       <div class="form-group"><label>초기 수량</label><input type="number" id="m-qty" min="0" value="0"></div>
-      <div class="form-group"><label>최소 수량 (저재고 기준)</label><input type="number" id="m-min" min="0" value="5"></div>
+      <div class="form-group full"><label>최소 수량 (저재고 기준, 기본값: 1)</label><input type="number" id="m-min" min="0" value="1"></div>
       <div class="form-group full"><label>메모</label><textarea id="m-memo" placeholder="품목 설명 (선택)"></textarea></div>
     </div>
     <div class="modal-footer">
@@ -455,7 +458,7 @@ window.renderDashboard = function() {
           <div class="low-item-name">${i.name}</div>
           <div style="font-size:11px;color:var(--muted)">${i.code||''} · ${i.category||'미분류'}</div>
         </div>
-        <div class="low-item-qty">${i.qty} ${i.unit||'개'} <span style="color:var(--muted);font-size:11px">/ 최소 ${i.minQty}</span></div>
+        <div class="low-item-qty">${i.qty}개 <span style="color:var(--muted);font-size:11px">/ 최소 ${i.minQty} · ${i.unit||''} ${i.schedule||''}</span></div>
       </div>`).join('');
   renderRecentHistory();
 }
@@ -483,7 +486,7 @@ window.renderItems = function() {
   const filtered = itemsCache.filter(i => i.name.toLowerCase().includes(q));
   const tb       = document.getElementById('items-tbody');
   if (filtered.length === 0) {
-    tb.innerHTML = '<tr><td colspan="8"><div class="empty"><div class="empty-icon">📦</div>품목 없음</div></td></tr>';
+    tb.innerHTML = '<tr><td colspan="9"><div class="empty"><div class="empty-icon">📦</div>품목 없음</div></td></tr>';
     return;
   }
   tb.innerHTML = filtered.map(i => {
@@ -493,11 +496,12 @@ window.renderItems = function() {
         ? '<span class="badge badge-low">저재고</span>'
         : '<span class="badge badge-ok">정상</span>';
     return `<tr>
-      <td class="mono" style="font-size:12px">${i.code||'-'}</td>
-      <td style="font-weight:500">${i.name}</td>
       <td>${i.category||'-'}</td>
+      <td style="font-weight:500">${i.name}</td>
+      <td class="mono" style="font-size:12px">${i.code||'-'}</td>
+      <td>${i.unit||'-'}</td>
+      <td>${i.schedule||'-'}</td>
       <td class="mono" style="font-size:14px;font-weight:600">${i.qty}</td>
-      <td>${i.unit||'개'}</td>
       <td class="mono">${i.minQty}</td>
       <td>${st}</td>
       <td>
@@ -514,9 +518,9 @@ let editingId = null;
 window.openAddItem = function() {
   editingId = null;
   document.getElementById('modal-item-title').textContent = '품목 추가';
-  ['m-code','m-name','m-cat','m-unit','m-memo'].forEach(id => document.getElementById(id).value = '');
+  ['m-code','m-name','m-cat','m-unit','m-schedule','m-memo'].forEach(id => document.getElementById(id).value = '');
   document.getElementById('m-qty').value = 0;
-  document.getElementById('m-min').value = 5;
+  document.getElementById('m-min').value = 1;
   document.getElementById('modal-item').classList.add('open');
 }
 
@@ -528,10 +532,11 @@ window.openEditItem = function(id) {
   document.getElementById('m-code').value = item.code||'';
   document.getElementById('m-name').value = item.name;
   document.getElementById('m-cat').value  = item.category||'';
-  document.getElementById('m-unit').value = item.unit||'';
-  document.getElementById('m-qty').value  = item.qty;
-  document.getElementById('m-min').value  = item.minQty;
-  document.getElementById('m-memo').value = item.memo||'';
+  document.getElementById('m-unit').value     = item.unit||'';
+  document.getElementById('m-schedule').value = item.schedule||'';
+  document.getElementById('m-qty').value      = item.qty;
+  document.getElementById('m-min').value      = item.minQty;
+  document.getElementById('m-memo').value     = item.memo||'';
   document.getElementById('modal-item').classList.add('open');
 }
 
@@ -551,8 +556,9 @@ window.saveItem = async function() {
       name,
       category: document.getElementById('m-cat').value.trim(),
       unit:     document.getElementById('m-unit').value.trim(),
+      schedule: document.getElementById('m-schedule').value.trim(),
       qty:      parseInt(document.getElementById('m-qty').value)||0,
-      minQty:   parseInt(document.getElementById('m-min').value)||0,
+      minQty:   parseInt(document.getElementById('m-min').value)||1,
       memo:     document.getElementById('m-memo').value.trim(),
     };
     if (editingId) {
@@ -685,13 +691,82 @@ window.renderHistory = function() {
 }
 
 // ── Excel Export ───────────────────────────────
+// ── CSV Import ─────────────────────────────────
+window.handleCsvUpload = async function(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  event.target.value = ''; // reset input
+
+  const text = await file.text();
+  const lines = text.split(/\r?\n/).filter(l => l.trim());
+  if (lines.length < 2) { toast('데이터가 없습니다', 'error'); return; }
+
+  // 헤더 파싱 (첫 줄 skip)
+  const rows = lines.slice(1);
+  let successCount = 0;
+  let errorCount = 0;
+  const errors = [];
+
+  toast(`CSV 처리 중... (${rows.length}건)`, 'info');
+
+  for (const line of rows) {
+    // 쉼표로 분리 (따옴표 처리 포함)
+    const cols = parseCsvLine(line);
+    const [category='', name='', code='', unit='', schedule='', qtyStr='0', minQtyStr='1', memo=''] = cols;
+    if (!name.trim()) continue;
+
+    try {
+      await addDoc(collection(db, 'items'), {
+        category: category.trim(),
+        name:     name.trim(),
+        code:     code.trim(),
+        unit:     unit.trim(),
+        schedule: schedule.trim(),
+        qty:      parseInt(qtyStr)||0,
+        minQty:   parseInt(minQtyStr)||1,
+        memo:     memo.trim(),
+        createdAt: serverTimestamp()
+      });
+      successCount++;
+    } catch(e) {
+      errorCount++;
+      errors.push(name.trim());
+    }
+  }
+
+  if (errorCount === 0) {
+    toast(`✅ ${successCount}건 등록 완료!`);
+  } else {
+    toast(`${successCount}건 성공 / ${errorCount}건 실패`, errorCount > 0 ? 'error' : 'success');
+  }
+}
+
+function parseCsvLine(line) {
+  const result = [];
+  let current = '';
+  let inQuotes = false;
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (ch === '"') {
+      inQuotes = !inQuotes;
+    } else if (ch === ',' && !inQuotes) {
+      result.push(current);
+      current = '';
+    } else {
+      current += ch;
+    }
+  }
+  result.push(current);
+  return result;
+}
+
 window.exportExcel = function() {
   if (itemsCache.length === 0) { toast('내보낼 품목이 없습니다', 'error'); return; }
   const wb = XLSX.utils.book_new();
-  const itemData = [['품목코드','품목명','카테고리','현재수량','단위','최소수량','상태','메모']];
+  const itemData = [['카테고리','품목명','품목코드','주관경','스케줄','현재수량','최소수량','상태','메모']];
   itemsCache.forEach(i => {
     const st = i.qty===0?'재고없음':i.qty<=i.minQty?'저재고':'정상';
-    itemData.push([i.code||'',i.name,i.category||'',i.qty,i.unit||'개',i.minQty,st,i.memo||'']);
+    itemData.push([i.category||'',i.name,i.code||'',i.unit||'',i.schedule||'',i.qty,i.minQty,st,i.memo||'']);
   });
   const ws1 = XLSX.utils.aoa_to_sheet(itemData);
   ws1['!cols'] = [{wch:10},{wch:20},{wch:12},{wch:10},{wch:8},{wch:10},{wch:10},{wch:20}];
