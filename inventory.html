@@ -254,6 +254,13 @@
   @media (max-width: 768px) {
     .login-box { width: calc(100vw - 32px); padding: 28px 20px; }
   }
+  /* ── Sort ── */
+  .sort-th { cursor:pointer; user-select:none; white-space:nowrap; }
+  .sort-th:hover { color:var(--text); background:rgba(59,130,246,.08); }
+  .sort-icon { display:inline-block; margin-left:4px; opacity:.35; font-size:10px; transition:opacity .15s; }
+  .sort-th.asc  .sort-icon { opacity:1; }
+  .sort-th.desc .sort-icon { opacity:1; }
+
   .admin-badge { display:inline-flex; align-items:center; gap:4px; background:rgba(245,158,11,.12); color:var(--yellow); border:1px solid rgba(245,158,11,.2); border-radius:20px; padding:2px 8px; font-size:11px; font-weight:600; }
   .nav-item[data-page="admin"] { color: var(--yellow) !important; }
   .nav-item[data-page="admin"].active { background: rgba(245,158,11,.1) !important; border-left-color: var(--yellow) !important; }
@@ -371,7 +378,18 @@
         <div class="table-title">전체 품목</div>
         <input type="text" class="search-input" id="item-search" placeholder="품목명 검색..." oninput="renderItems()">
       </div>
-      <table><thead><tr><th>카테고리</th><th>품목명</th><th>품목코드</th><th>주관경</th><th>스케줄</th><th>무게/등급</th><th>현재 수량</th><th>최소수량</th><th>상태</th><th>관리</th></tr></thead>
+      <table><thead><tr>
+  <th class="sort-th" onclick="sortItems('category')">카테고리<span class="sort-icon">↕</span></th>
+  <th class="sort-th" onclick="sortItems('name')">품목명<span class="sort-icon">↕</span></th>
+  <th>품목코드</th>
+  <th class="sort-th" onclick="sortItems('unit')">주관경<span class="sort-icon">↕</span></th>
+  <th>스케줄</th>
+  <th>무게/등급</th>
+  <th class="sort-th" onclick="sortItems('qty')">현재 수량<span class="sort-icon">↕</span></th>
+  <th class="sort-th" onclick="sortItems('minQty')">최소수량<span class="sort-icon">↕</span></th>
+  <th class="sort-th" onclick="sortItems('status')">상태<span class="sort-icon">↕</span></th>
+  <th>관리</th>
+</tr></thead>
       <tbody id="items-tbody"><tr><td colspan="8"><div class="empty"><div class="empty-icon">⏳</div>로딩 중...</div></td></tr></tbody></table>
     </div>
   </div>
@@ -392,8 +410,11 @@
     <div class="table-wrap">
       <table>
         <thead><tr>
-          <th>카테고리</th><th>품목명</th><th>주관경</th><th>스케줄</th><th>무게/등급</th>
-          <th style="text-align:center;">현재수량</th>
+          <th class="sort-th" onclick="sortIO('category')">카테고리<span class="sort-icon">↕</span></th>
+          <th class="sort-th" onclick="sortIO('name')">품목명<span class="sort-icon">↕</span></th>
+          <th class="sort-th" onclick="sortIO('unit')">주관경<span class="sort-icon">↕</span></th>
+          <th>스케줄</th><th>무게/등급</th>
+          <th class="sort-th" style="text-align:center;" onclick="sortIO('qty')">현재수량<span class="sort-icon">↕</span></th>
           <th style="text-align:center;">입고 / 출고</th>
         </tr></thead>
         <tbody id="io-tbody"></tbody>
@@ -422,7 +443,15 @@
           <input type="text" class="search-input" id="hist-search" placeholder="품목명 검색..." oninput="renderHistory()">
         </div>
       </div>
-      <table><thead><tr><th>일시</th><th>품목명</th><th>구분</th><th>수량</th><th>처리 후 재고</th><th>작업자</th><th>메모</th></tr></thead>
+      <table><thead><tr>
+  <th class="sort-th" onclick="sortHistory('date')">일시<span class="sort-icon">↕</span></th>
+  <th class="sort-th" onclick="sortHistory('itemName')">품목명<span class="sort-icon">↕</span></th>
+  <th class="sort-th" onclick="sortHistory('type')">구분<span class="sort-icon">↕</span></th>
+  <th class="sort-th" onclick="sortHistory('qty')">수량<span class="sort-icon">↕</span></th>
+  <th>처리 후 재고</th>
+  <th class="sort-th" onclick="sortHistory('userName')">작업자<span class="sort-icon">↕</span></th>
+  <th>메모</th>
+</tr></thead>
       <tbody id="history-tbody"><tr><td colspan="6"><div class="empty"><div class="empty-icon">⏳</div>로딩 중...</div></td></tr></tbody></table>
     </div>
   </div>
@@ -657,10 +686,76 @@ function renderRecentHistory() {
 }
 
 // ── Items ──────────────────────────────────────
+// ── Sort State ────────────────────────────────
+const sortState = {
+  items:   { key: 'category', dir: 'asc' },
+  io:      { key: 'category', dir: 'asc' },
+  history: { key: 'date',     dir: 'desc' },
+};
+
+function applySort(arr, key, dir) {
+  return [...arr].sort((a, b) => {
+    let va = a[key] ?? '';
+    let vb = b[key] ?? '';
+    // 숫자 비교
+    if (typeof va === 'number' && typeof vb === 'number') {
+      return dir === 'asc' ? va - vb : vb - va;
+    }
+    // 상태 정렬 (재고없음 > 저재고 > 정상)
+    if (key === 'status') {
+      const rank = i => i.qty === 0 ? 0 : i.qty <= i.minQty ? 1 : 2;
+      return dir === 'asc' ? rank(a) - rank(b) : rank(b) - rank(a);
+    }
+    va = String(va).toLowerCase();
+    vb = String(vb).toLowerCase();
+    if (va < vb) return dir === 'asc' ? -1 :  1;
+    if (va > vb) return dir === 'asc' ?  1 : -1;
+    return 0;
+  });
+}
+
+function updateSortIcons(tableId, key, dir) {
+  document.querySelectorAll(`#${tableId} .sort-th`).forEach(th => {
+    th.classList.remove('asc','desc');
+    const icon = th.querySelector('.sort-icon');
+    if (!icon) return;
+    const onclick = th.getAttribute('onclick') || '';
+    const match   = onclick.match(/'([^']+)'/);
+    if (match && match[1] === key) {
+      th.classList.add(dir);
+      icon.textContent = dir === 'asc' ? '↑' : '↓';
+    } else {
+      icon.textContent = '↕';
+    }
+  });
+}
+
+window.sortItems = function(key) {
+  const s = sortState.items;
+  s.dir = (s.key === key && s.dir === 'asc') ? 'desc' : 'asc';
+  s.key = key;
+  renderItems();
+}
+window.sortIO = function(key) {
+  const s = sortState.io;
+  s.dir = (s.key === key && s.dir === 'asc') ? 'desc' : 'asc';
+  s.key = key;
+  renderIOList();
+}
+window.sortHistory = function(key) {
+  const s = sortState.history;
+  s.dir = (s.key === key && s.dir === 'asc') ? 'desc' : 'asc';
+  s.key = key;
+  renderHistory();
+}
+
 window.renderItems = function() {
   const q        = (document.getElementById('item-search')?.value||'').toLowerCase();
-  const filtered = itemsCache.filter(i => i.name.toLowerCase().includes(q));
-  const tb       = document.getElementById('items-tbody');
+  let   filtered = itemsCache.filter(i => i.name.toLowerCase().includes(q) || (i.category||'').toLowerCase().includes(q));
+  const { key: sKey, dir: sDir } = sortState.items;
+  filtered = applySort(filtered, sKey, sDir);
+  updateSortIcons('page-items', sKey, sDir);
+  const tb = document.getElementById('items-tbody');
   if (filtered.length === 0) {
     tb.innerHTML = '<tr><td colspan="9"><div class="empty"><div class="empty-icon">📦</div>품목 없음</div></td></tr>';
     return;
@@ -768,9 +863,12 @@ window.deleteItem = async function(id) {
 
 // ── IO List (입고/출고 통합) ────────────────────
 window.renderIOList = function() {
-  const q        = (document.getElementById('io-search')?.value||'').toLowerCase();
-  const filtered = itemsCache.filter(i => i.name.toLowerCase().includes(q));
-  const tb       = document.getElementById('io-tbody');
+  const q = (document.getElementById('io-search')?.value||'').toLowerCase();
+  let filtered = itemsCache.filter(i => i.name.toLowerCase().includes(q) || (i.category||'').toLowerCase().includes(q));
+  const { key: sKey, dir: sDir } = sortState.io;
+  filtered = applySort(filtered, sKey, sDir);
+  updateSortIcons('page-inbound', sKey, sDir);
+  const tb = document.getElementById('io-tbody');
   if (!tb) return;
   if (filtered.length === 0) {
     tb.innerHTML = '<tr><td colspan="6"><div class="empty"><div class="empty-icon">📦</div>품목 없음</div></td></tr>';
@@ -852,6 +950,9 @@ window.renderHistory = function() {
   const q  = (document.getElementById('hist-search')?.value||'').toLowerCase();
   if (histFilter !== 'all') hist = hist.filter(h => h.type === histFilter);
   if (q) hist = hist.filter(h => h.itemName?.toLowerCase().includes(q));
+  const { key: sKey, dir: sDir } = sortState.history;
+  hist = applySort(hist, sKey, sDir);
+  updateSortIcons('page-history', sKey, sDir);
   const tb = document.getElementById('history-tbody');
   if (hist.length === 0) {
     tb.innerHTML = '<tr><td colspan="6"><div class="empty"><div class="empty-icon">📋</div>이력 없음</div></td></tr>';
