@@ -235,6 +235,9 @@
   @media (max-width: 768px) {
     .login-box { width: calc(100vw - 32px); padding: 28px 20px; }
   }
+  .admin-badge { display:inline-flex; align-items:center; gap:4px; background:rgba(245,158,11,.12); color:var(--yellow); border:1px solid rgba(245,158,11,.2); border-radius:20px; padding:2px 8px; font-size:11px; font-weight:600; }
+  .nav-item[data-page="admin"] { color: var(--yellow) !important; }
+  .nav-item[data-page="admin"].active { background: rgba(245,158,11,.1) !important; border-left-color: var(--yellow) !important; }
 </style>
 </head>
 <body>
@@ -273,6 +276,7 @@
   <div class="nav-item" data-page="items"><span>◈</span> 품목 관리</div>
   <div class="nav-item" data-page="inbound"><span>↕</span> 입고 / 출고</div>
   <div class="nav-item" data-page="history"><span>≡</span> 이력 조회</div>
+  <div class="nav-item admin-only" data-page="admin" id="nav-admin" style="display:none"><span>👑</span> 관리자</div>
   <div class="user-info" id="sidebar-user" style="display:none">
     <div class="user-name" id="sidebar-name">-</div>
     <div class="user-email" id="sidebar-email">-</div>
@@ -291,6 +295,7 @@
     <button class="mobile-nav-item" data-page="items"><span class="mn-icon">◈</span>품목</button>
     <button class="mobile-nav-item" data-page="inbound"><span class="mn-icon">↕</span>입출고</button>
     <button class="mobile-nav-item" data-page="history"><span class="mn-icon">≡</span>이력</button>
+    <button class="mobile-nav-item admin-only" data-page="admin" id="mnav-admin" style="display:none"><span class="mn-icon">👑</span>관리자</button>
   </div>
 </nav>
 
@@ -392,6 +397,42 @@
     </div>
   </div>
 
+  <!-- 관리자 페이지 -->
+  <div class="page" id="page-admin">
+    <div class="page-header">
+      <div class="page-title">👑 관리자 <span>bc25.kim@samsung.com</span></div>
+    </div>
+
+    <!-- 이력 삭제 섹션 -->
+    <div class="table-wrap" style="margin-bottom:20px;">
+      <div class="table-header">
+        <div class="table-title">🗑 입출고 이력 관리</div>
+      </div>
+      <div style="padding:20px;display:flex;flex-direction:column;gap:12px;">
+        <div style="font-size:13px;color:var(--muted);line-height:1.6;">
+          이력을 삭제하면 복구할 수 없습니다.<br>
+          현재 재고 수량에는 영향을 주지 않습니다.
+        </div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;">
+          <button class="btn btn-danger" onclick="clearAllHistory()">🗑 전체 이력 삭제</button>
+        </div>
+        <div style="font-size:12px;color:var(--muted)" id="history-count-info"></div>
+      </div>
+    </div>
+
+    <!-- 가입 사용자 목록 -->
+    <div class="table-wrap">
+      <div class="table-header">
+        <div class="table-title">👥 이력 작업자 통계</div>
+        <button class="btn btn-outline btn-sm" onclick="loadUserStats()">🔄 새로고침</button>
+      </div>
+      <table>
+        <thead><tr><th>작업자</th><th>입고 횟수</th><th>출고 횟수</th><th>총 작업</th></tr></thead>
+        <tbody id="user-stats-tbody"><tr><td colspan="4"><div class="empty"><div class="empty-icon">👥</div>새로고침을 눌러주세요</div></td></tr></tbody>
+      </table>
+    </div>
+  </div>
+
 </main>
 
 <!-- 품목 추가/편집 모달 -->
@@ -446,6 +487,10 @@ const db   = getFirestore(app);
 const auth = getAuth(app);
 let   currentUser = null;
 
+// ── 관리자 설정 ────────────────────────────────
+const ADMIN_EMAIL = 'bc25.kim@samsung.com';
+function isAdmin() { return currentUser?.email === ADMIN_EMAIL; }
+
 // ── 전역 캐시 ──────────────────────────────────
 let itemsCache   = [];
 let historyCache = [];
@@ -498,16 +543,19 @@ function startListeners() {
 
 // ── Navigation ─────────────────────────────────
 function navigateTo(page) {
+  if (page === 'admin' && !isAdmin()) { toast('관리자만 접근 가능합니다', 'error'); return; }
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
   document.querySelectorAll('.mobile-nav-item').forEach(n => n.classList.remove('active'));
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.querySelectorAll(`[data-page="${page}"]`).forEach(el => el.classList.add('active'));
-  document.getElementById('page-' + page).classList.add('active');
+  const pageEl = document.getElementById('page-' + page);
+  if (pageEl) pageEl.classList.add('active');
   if (page === 'dashboard') renderDashboard();
   if (page === 'items') renderItems();
   if (page === 'inbound') { fillItemSelects(); }
   if (page === 'outbound') { navigateTo('inbound'); return; }
   if (page === 'history') renderHistory();
+  if (page === 'admin') { loadUserStats(); }
 }
 
 document.querySelectorAll('.nav-item, .mobile-nav-item').forEach(el => {
@@ -961,12 +1009,72 @@ function showApp(user) {
   nameEl.textContent  = user.displayName || user.email;
   emailEl.textContent = user.email;
   userDiv.style.display = 'block';
+  // 관리자 메뉴 표시
+  const isAdminUser = user.email === ADMIN_EMAIL;
+  document.getElementById('nav-admin').style.display  = isAdminUser ? 'flex' : 'none';
+  document.getElementById('mnav-admin').style.display = isAdminUser ? 'flex' : 'none';
+  // 관리자 배지 표시
+  if (isAdminUser) {
+    const nameEl2 = document.getElementById('sidebar-name');
+    nameEl2.innerHTML = (user.displayName || user.email) + ' <span class="admin-badge">👑 관리자</span>';
+  }
   // 앱 시작
   const today = new Date().toISOString().slice(0,10);
   const ioDateEl = document.getElementById('io-date');
   if (ioDateEl) ioDateEl.value = today;
   startListeners();
 }
+
+// ── Admin Functions ───────────────────────────
+window.clearAllHistory = async function() {
+  const count = historyCache.length;
+  if (count === 0) { toast('삭제할 이력이 없습니다', 'error'); return; }
+  if (!confirm(`입출고 이력 ${count}건을 전체 삭제하시겠습니까?\n\n이 작업은 되돌릴 수 없습니다.`)) return;
+  if (!isAdmin()) { toast('관리자만 가능합니다', 'error'); return; }
+
+  toast('삭제 중...', 'info');
+  try {
+    // Firestore는 배치 최대 500개
+    const batchSize = 400;
+    const allDocs   = historyCache.map(h => h.id);
+    for (let i = 0; i < allDocs.length; i += batchSize) {
+      const chunk = allDocs.slice(i, i + batchSize);
+      await Promise.all(chunk.map(id => deleteDoc(doc(db, 'history', id))));
+    }
+    toast(`✅ 이력 ${count}건 삭제 완료`);
+  } catch(e) {
+    toast('삭제 실패: ' + e.message, 'error');
+  }
+}
+
+window.loadUserStats = function() {
+  if (!isAdmin()) return;
+  const stats = {};
+  historyCache.forEach(h => {
+    const name = h.userName || '알수없음';
+    if (!stats[name]) stats[name] = { in: 0, out: 0 };
+    stats[name][h.type]++;
+  });
+  const tb = document.getElementById('user-stats-tbody');
+  const entries = Object.entries(stats).sort((a,b) => (b[1].in+b[1].out) - (a[1].in+a[1].out));
+  if (entries.length === 0) {
+    tb.innerHTML = '<tr><td colspan="4"><div class="empty"><div class="empty-icon">👥</div>이력 없음</div></td></tr>';
+    return;
+  }
+  tb.innerHTML = entries.map(([name, s]) => `
+    <tr>
+      <td style="font-weight:500">${name}</td>
+      <td style="color:var(--green)" class="mono">+${s.in}</td>
+      <td style="color:var(--red)" class="mono">-${s.out}</td>
+      <td class="mono">${s.in + s.out}</td>
+    </tr>`).join('');
+  // 이력 수 표시
+  const infoEl = document.getElementById('history-count-info');
+  if (infoEl) infoEl.textContent = `현재 저장된 이력: 총 ${historyCache.length}건`;
+}
+
+// navigateTo에서 admin 페이지 접근 시 통계 자동 로드
+const _origNavigateTo = window.navigateTo;
 
 // ── Toast ──────────────────────────────────────
 window.toast = function(msg, type='success') {
