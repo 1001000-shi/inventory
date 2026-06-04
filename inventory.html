@@ -198,12 +198,72 @@
     /* Low stock */
     .low-item { flex-direction: column; align-items: flex-start; gap: 6px; }
   }
+
+  /* ── Login Screen ── */
+  #login-screen {
+    display: none; position: fixed; inset: 0;
+    background: var(--bg); z-index: 500;
+    align-items: center; justify-content: center;
+  }
+  #login-screen.show { display: flex; }
+  .login-box {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 16px; padding: 36px 32px;
+    width: 380px; box-shadow: 0 24px 64px rgba(0,0,0,.5);
+  }
+  .login-logo { text-align: center; margin-bottom: 28px; }
+  .login-logo-icon { font-size: 36px; margin-bottom: 10px; }
+  .login-logo h2 { font-size: 18px; font-weight: 700; }
+  .login-logo p  { font-size: 12px; color: var(--muted); margin-top: 4px; }
+  .login-tabs { display: flex; margin-bottom: 24px; background: var(--bg); border-radius: 8px; padding: 3px; }
+  .login-tab  { flex: 1; padding: 8px; text-align: center; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 500; color: var(--muted); transition: all .15s; border: none; background: none; font-family: inherit; }
+  .login-tab.active { background: var(--surface2); color: var(--text); }
+  .login-form { display: flex; flex-direction: column; gap: 14px; }
+  .login-form input { width: 100%; }
+  .login-btn { width: 100%; padding: 11px; border-radius: 8px; font-size: 14px; font-weight: 600; font-family: inherit; cursor: pointer; border: none; transition: all .15s; margin-top: 4px; }
+  .login-btn-primary { background: var(--accent); color: #fff; }
+  .login-btn-primary:hover { background: #2563eb; box-shadow: 0 0 16px var(--accent-glow); }
+  .login-err { font-size: 12px; color: var(--red); text-align: center; min-height: 18px; }
+
+  /* ── User info in sidebar ── */
+  .user-info { padding: 12px 20px; border-top: 1px solid var(--border); margin-top: 8px; }
+  .user-email { font-size: 11px; color: var(--muted); margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .user-name  { font-size: 13px; font-weight: 600; margin-bottom: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .logout-btn { width: 100%; padding: 7px; border-radius: 7px; font-size: 12px; font-family: inherit; cursor: pointer; border: 1px solid var(--border); background: transparent; color: var(--muted); transition: all .15s; }
+  .logout-btn:hover { color: var(--red); border-color: var(--red); background: rgba(239,68,68,.08); }
+
+  @media (max-width: 768px) {
+    .login-box { width: calc(100vw - 32px); padding: 28px 20px; }
+  }
 </style>
 </head>
 <body>
 
 <!-- Sidebar -->
-<nav class="sidebar">
+<!-- Login Screen -->
+<div id="login-screen">
+  <div class="login-box">
+    <div class="login-logo">
+      <div class="login-logo-icon">📦</div>
+      <h2>재고관리 시스템</h2>
+      <p>계속하려면 로그인하세요</p>
+    </div>
+    <div class="login-tabs">
+      <button class="login-tab active" onclick="switchLoginTab('login', this)">로그인</button>
+      <button class="login-tab" onclick="switchLoginTab('signup', this)">회원가입</button>
+    </div>
+    <!-- 로그인 폼 -->
+    <div id="form-login" class="login-form">
+      <input type="text" id="login-name-display" placeholder="이름 (표시용)" style="display:none">
+      <input type="email" id="login-email" placeholder="이메일">
+      <input type="password" id="login-pw" placeholder="비밀번호" onkeydown="if(event.key==='Enter') doLogin()">
+      <div class="login-err" id="login-err"></div>
+      <button class="login-btn login-btn-primary" onclick="doLogin()">로그인</button>
+    </div>
+  </div>
+</div>
+
+<nav class="sidebar" style="display:none">
   <div class="logo">
     <div class="logo-icon">📦</div>
     <h1>재고관리 시스템</h1>
@@ -213,6 +273,11 @@
   <div class="nav-item" data-page="items"><span>◈</span> 품목 관리</div>
   <div class="nav-item" data-page="inbound"><span>↕</span> 입고 / 출고</div>
   <div class="nav-item" data-page="history"><span>≡</span> 이력 조회</div>
+  <div class="user-info" id="sidebar-user" style="display:none">
+    <div class="user-name" id="sidebar-name">-</div>
+    <div class="user-email" id="sidebar-email">-</div>
+    <button class="logout-btn" onclick="doLogout()">🚪 로그아웃</button>
+  </div>
   <div class="db-status" id="db-status">
     <div class="db-dot" id="db-dot"></div>
     <span id="db-label">연결 중...</span>
@@ -220,7 +285,7 @@
 </nav>
 
 <!-- Mobile Bottom Nav -->
-<nav class="mobile-nav">
+<nav class="mobile-nav" style="display:none">
   <div class="mobile-nav-items">
     <button class="mobile-nav-item active" data-page="dashboard"><span class="mn-icon">▦</span>대시보드</button>
     <button class="mobile-nav-item" data-page="items"><span class="mn-icon">◈</span>품목</button>
@@ -230,7 +295,7 @@
 </nav>
 
 <!-- Main -->
-<main class="main">
+<main class="main" style="display:none">
 
   <!-- 대시보드 -->
   <div class="page active" id="page-dashboard">
@@ -250,7 +315,7 @@
     </div>
     <div class="table-wrap">
       <div class="table-header"><div class="table-title">최근 입출고 이력</div></div>
-      <table><thead><tr><th>일시</th><th>품목명</th><th>구분</th><th>수량</th><th>메모</th></tr></thead>
+      <table><thead><tr><th>일시</th><th>품목명</th><th>구분</th><th>수량</th><th>작업자</th><th>메모</th></tr></thead>
       <tbody id="recent-tbody"><tr><td colspan="5"><div class="empty"><div class="empty-icon">⏳</div>로딩 중...</div></td></tr></tbody></table>
     </div>
   </div>
@@ -271,7 +336,7 @@
         <div class="table-title">전체 품목</div>
         <input type="text" class="search-input" id="item-search" placeholder="품목명 검색..." oninput="renderItems()">
       </div>
-      <table><thead><tr><th>카테고리</th><th>품목명</th><th>품목코드</th><th>주관경</th><th>스케줄</th><th>현재 수량</th><th>최소수량</th><th>상태</th><th>관리</th></tr></thead>
+      <table><thead><tr><th>카테고리</th><th>품목명</th><th>품목코드</th><th>주관경</th><th>스케줄</th><th>무게/등급</th><th>현재 수량</th><th>최소수량</th><th>상태</th><th>관리</th></tr></thead>
       <tbody id="items-tbody"><tr><td colspan="8"><div class="empty"><div class="empty-icon">⏳</div>로딩 중...</div></td></tr></tbody></table>
     </div>
   </div>
@@ -292,7 +357,7 @@
     <div class="table-wrap">
       <table>
         <thead><tr>
-          <th>카테고리</th><th>품목명</th><th>주관경</th><th>스케줄</th>
+          <th>카테고리</th><th>품목명</th><th>주관경</th><th>스케줄</th><th>무게/등급</th>
           <th style="text-align:center;">현재수량</th>
           <th style="text-align:center;">입고 / 출고</th>
         </tr></thead>
@@ -322,7 +387,7 @@
           <input type="text" class="search-input" id="hist-search" placeholder="품목명 검색..." oninput="renderHistory()">
         </div>
       </div>
-      <table><thead><tr><th>일시</th><th>품목명</th><th>구분</th><th>수량</th><th>처리 후 재고</th><th>메모</th></tr></thead>
+      <table><thead><tr><th>일시</th><th>품목명</th><th>구분</th><th>수량</th><th>처리 후 재고</th><th>작업자</th><th>메모</th></tr></thead>
       <tbody id="history-tbody"><tr><td colspan="6"><div class="empty"><div class="empty-icon">⏳</div>로딩 중...</div></td></tr></tbody></table>
     </div>
   </div>
@@ -339,6 +404,7 @@
       <div class="form-group"><label>품목코드</label><input type="text" id="m-code" placeholder="예: P001"></div>
       <div class="form-group"><label>주관경</label><input type="text" id="m-unit" placeholder="예: 25A, 50A, 100A"></div>
       <div class="form-group"><label>스케줄</label><input type="text" id="m-schedule" placeholder="예: SCH40, SCH80"></div>
+      <div class="form-group"><label>무게 / 등급</label><input type="text" id="m-weight" placeholder="예: 150LB, 300LB, 10K"></div>
       <div class="form-group"><label>초기 수량</label><input type="number" id="m-qty" min="0" value="0"></div>
       <div class="form-group full"><label>최소 수량 (저재고 기준, 기본값: 1)</label><input type="number" id="m-min" min="0" value="1"></div>
       <div class="form-group full"><label>메모</label><textarea id="m-memo" placeholder="품목 설명 (선택)"></textarea></div>
@@ -360,6 +426,10 @@ import {
   getDocs, getDoc, addDoc, setDoc, updateDoc, deleteDoc,
   query, orderBy, limit, onSnapshot, serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import {
+  getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword,
+  signOut, onAuthStateChanged, updateProfile
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
 // ── Firebase 설정 ──────────────────────────────
 const firebaseConfig = {
@@ -371,8 +441,10 @@ const firebaseConfig = {
   appId: "1:741635006076:web:090b595e2753b1daa573f9"
 };
 
-const app = initializeApp(firebaseConfig);
-const db  = getFirestore(app);
+const app  = initializeApp(firebaseConfig);
+const db   = getFirestore(app);
+const auth = getAuth(app);
+let   currentUser = null;
 
 // ── 전역 캐시 ──────────────────────────────────
 let itemsCache   = [];
@@ -395,7 +467,10 @@ function setDbStatus(state) {
 }
 
 // ── 실시간 리스너 ──────────────────────────────
+let listenersStarted = false;
 function startListeners() {
+  if (listenersStarted) return;
+  listenersStarted = true;
   // Items 실시간 구독
   const itemsQ = query(collection(db, 'items'), orderBy('createdAt', 'asc'));
   onSnapshot(itemsQ, snap => {
@@ -478,6 +553,7 @@ function renderRecentHistory() {
       <td>${h.itemName}</td>
       <td><span class="badge ${h.type==='in'?'badge-in':'badge-out'}">${h.type==='in'?'입고':'출고'}</span></td>
       <td class="mono">${h.type==='in'?'+':'-'}${h.qty}</td>
+      <td style="color:var(--accent);font-size:12px">${h.userName||'-'}</td>
       <td style="color:var(--muted);font-size:12px">${h.memo||'-'}</td>
     </tr>`).join('');
 }
@@ -503,6 +579,7 @@ window.renderItems = function() {
       <td class="mono" style="font-size:12px">${i.code||'-'}</td>
       <td>${i.unit||'-'}</td>
       <td>${i.schedule||'-'}</td>
+      <td style="font-size:12px;color:var(--muted)">${i.weight||'-'}</td>
       <td class="mono" style="font-size:14px;font-weight:600">${i.qty}</td>
       <td class="mono">${i.minQty}</td>
       <td>${st}</td>
@@ -520,7 +597,7 @@ let editingId = null;
 window.openAddItem = function() {
   editingId = null;
   document.getElementById('modal-item-title').textContent = '품목 추가';
-  ['m-code','m-name','m-cat','m-unit','m-schedule','m-memo'].forEach(id => document.getElementById(id).value = '');
+  ['m-code','m-name','m-cat','m-unit','m-schedule','m-weight','m-memo'].forEach(id => document.getElementById(id).value = '');
   document.getElementById('m-qty').value = 0;
   document.getElementById('m-min').value = 1;
   document.getElementById('modal-item').classList.add('open');
@@ -536,6 +613,7 @@ window.openEditItem = function(id) {
   document.getElementById('m-cat').value  = item.category||'';
   document.getElementById('m-unit').value     = item.unit||'';
   document.getElementById('m-schedule').value = item.schedule||'';
+  document.getElementById('m-weight').value   = item.weight||'';
   document.getElementById('m-qty').value      = item.qty;
   document.getElementById('m-min').value      = item.minQty;
   document.getElementById('m-memo').value     = item.memo||'';
@@ -559,6 +637,7 @@ window.saveItem = async function() {
       category: document.getElementById('m-cat').value.trim(),
       unit:     document.getElementById('m-unit').value.trim(),
       schedule: document.getElementById('m-schedule').value.trim(),
+      weight:   document.getElementById('m-weight').value.trim(),
       qty:      parseInt(document.getElementById('m-qty').value)||0,
       minQty:   parseInt(document.getElementById('m-min').value)||1,
       memo:     document.getElementById('m-memo').value.trim(),
@@ -606,6 +685,7 @@ window.renderIOList = function() {
       <td style="font-weight:500">${i.name}</td>
       <td>${i.unit||'-'}</td>
       <td>${i.schedule||'-'}</td>
+      <td style="font-size:12px;color:var(--muted)">${i.weight||'-'}</td>
       <td class="io-current" style="color:${qtyColor}">${i.qty}</td>
       <td>
         <div class="io-qty-ctrl">
@@ -638,7 +718,10 @@ window.doIO = async function(itemId, type) {
     await addDoc(collection(db, 'history'), {
       type, itemId, itemName: item.name,
       qty, afterQty: newQty,
-      date, memo: '', createdAt: serverTimestamp()
+      date, memo: '',
+      userId:   currentUser?.uid || '',
+      userName: currentUser?.displayName || currentUser?.email || '알수없음',
+      createdAt: serverTimestamp()
     });
     qtyEl.value = 1;
     toast(type === 'in' ? `✅ 입고: ${item.name} +${qty}` : `📤 출고: ${item.name} -${qty}`,
@@ -683,6 +766,7 @@ window.renderHistory = function() {
       <td><span class="badge ${h.type==='in'?'badge-in':'badge-out'}">${h.type==='in'?'입고':'출고'}</span></td>
       <td class="mono" style="color:${h.type==='in'?'var(--green)':'var(--red)'}">${h.type==='in'?'+':'-'}${h.qty}</td>
       <td class="mono">${h.afterQty??'-'}</td>
+      <td style="color:var(--accent);font-size:12px">${h.userName||'-'}</td>
       <td style="color:var(--muted);font-size:12px">${h.memo||'-'}</td>
     </tr>`).join('');
 }
@@ -709,7 +793,7 @@ window.handleCsvUpload = async function(event) {
   for (const line of rows) {
     // 쉼표로 분리 (따옴표 처리 포함)
     const cols = parseCsvLine(line);
-    const [category='', name='', code='', unit='', schedule='', qtyStr='0', minQtyStr='1', memo=''] = cols;
+    const [category='', name='', code='', unit='', schedule='', weight='', qtyStr='0', minQtyStr='1', memo=''] = cols;
     if (!name.trim()) continue;
 
     try {
@@ -719,6 +803,7 @@ window.handleCsvUpload = async function(event) {
         code:     code.trim(),
         unit:     unit.trim(),
         schedule: schedule.trim(),
+        weight:   weight.trim(),
         qty:      parseInt(qtyStr)||0,
         minQty:   parseInt(minQtyStr)||1,
         memo:     memo.trim(),
@@ -760,10 +845,10 @@ function parseCsvLine(line) {
 window.exportExcel = function() {
   if (itemsCache.length === 0) { toast('내보낼 품목이 없습니다', 'error'); return; }
   const wb = XLSX.utils.book_new();
-  const itemData = [['카테고리','품목명','품목코드','주관경','스케줄','현재수량','최소수량','상태','메모']];
+  const itemData = [['카테고리','품목명','품목코드','주관경','스케줄','무게/등급','현재수량','최소수량','상태','메모']];
   itemsCache.forEach(i => {
     const st = i.qty===0?'재고없음':i.qty<=i.minQty?'저재고':'정상';
-    itemData.push([i.category||'',i.name,i.code||'',i.unit||'',i.schedule||'',i.qty,i.minQty,st,i.memo||'']);
+    itemData.push([i.category||'',i.name,i.code||'',i.unit||'',i.schedule||'',i.weight||'',i.qty,i.minQty,st,i.memo||'']);
   });
   const ws1 = XLSX.utils.aoa_to_sheet(itemData);
   ws1['!cols'] = [{wch:10},{wch:20},{wch:12},{wch:10},{wch:8},{wch:10},{wch:10},{wch:20}];
@@ -789,6 +874,100 @@ window.exportHistoryExcel = function() {
   toast('이력 엑셀이 저장되었습니다');
 }
 
+// ── Auth Functions ────────────────────────────
+let loginTab = 'login';
+
+window.switchLoginTab = function(tab, el) {
+  loginTab = tab;
+  document.querySelectorAll('.login-tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  const nameEl = document.getElementById('login-name-display');
+  const btnEl  = document.querySelector('.login-btn-primary');
+  if (tab === 'signup') {
+    nameEl.style.display = 'block';
+    nameEl.placeholder   = '이름 (표시용, 필수)';
+    btnEl.textContent    = '회원가입';
+    btnEl.onclick        = doSignup;
+  } else {
+    nameEl.style.display = 'none';
+    btnEl.textContent    = '로그인';
+    btnEl.onclick        = doLogin;
+  }
+  document.getElementById('login-err').textContent = '';
+}
+
+window.doLogin = async function() {
+  const email = document.getElementById('login-email').value.trim();
+  const pw    = document.getElementById('login-pw').value;
+  const errEl = document.getElementById('login-err');
+  if (!email || !pw) { errEl.textContent = '이메일과 비밀번호를 입력하세요'; return; }
+  try {
+    await signInWithEmailAndPassword(auth, email, pw);
+    errEl.textContent = '';
+  } catch(e) {
+    const msg = {
+      'auth/user-not-found':  '등록되지 않은 이메일입니다',
+      'auth/wrong-password':  '비밀번호가 틀렸습니다',
+      'auth/invalid-email':   '이메일 형식이 올바르지 않습니다',
+      'auth/invalid-credential': '이메일 또는 비밀번호가 틀렸습니다',
+    }[e.code] || '로그인 실패: ' + e.message;
+    errEl.textContent = msg;
+  }
+}
+
+window.doSignup = async function() {
+  const name  = document.getElementById('login-name-display').value.trim();
+  const email = document.getElementById('login-email').value.trim();
+  const pw    = document.getElementById('login-pw').value;
+  const errEl = document.getElementById('login-err');
+  if (!name)  { errEl.textContent = '이름을 입력하세요'; return; }
+  if (!email) { errEl.textContent = '이메일을 입력하세요'; return; }
+  if (pw.length < 6) { errEl.textContent = '비밀번호는 6자 이상이어야 합니다'; return; }
+  try {
+    const cred = await createUserWithEmailAndPassword(auth, email, pw);
+    await updateProfile(cred.user, { displayName: name });
+    errEl.textContent = '';
+  } catch(e) {
+    const msg = {
+      'auth/email-already-in-use': '이미 사용 중인 이메일입니다',
+      'auth/invalid-email':        '이메일 형식이 올바르지 않습니다',
+      'auth/weak-password':        '비밀번호가 너무 약합니다 (6자 이상)',
+    }[e.code] || '회원가입 실패: ' + e.message;
+    errEl.textContent = msg;
+  }
+}
+
+window.doLogout = async function() {
+  if (!confirm('로그아웃 하시겠습니까?')) return;
+  await signOut(auth);
+}
+
+function showLogin() {
+  document.getElementById('login-screen').classList.add('show');
+  document.querySelector('.sidebar').style.display = 'none';
+  document.querySelector('.mobile-nav').style.display = 'none';
+  document.querySelector('.main').style.display = 'none';
+}
+
+function showApp(user) {
+  document.getElementById('login-screen').classList.remove('show');
+  document.querySelector('.sidebar').style.display = 'flex';
+  document.querySelector('.mobile-nav').style.display = 'block';
+  document.querySelector('.main').style.display = 'block';
+  // 사이드바 유저 정보 표시
+  const nameEl  = document.getElementById('sidebar-name');
+  const emailEl = document.getElementById('sidebar-email');
+  const userDiv = document.getElementById('sidebar-user');
+  nameEl.textContent  = user.displayName || user.email;
+  emailEl.textContent = user.email;
+  userDiv.style.display = 'block';
+  // 앱 시작
+  const today = new Date().toISOString().slice(0,10);
+  const ioDateEl = document.getElementById('io-date');
+  if (ioDateEl) ioDateEl.value = today;
+  startListeners();
+}
+
 // ── Toast ──────────────────────────────────────
 window.toast = function(msg, type='success') {
   const t = document.getElementById('toast');
@@ -799,11 +978,21 @@ window.toast = function(msg, type='success') {
 
 function todayStr() { return new Date().toISOString().slice(0,10).replace(/-/g,''); }
 
+// ── Auth State ────────────────────────────────
+onAuthStateChanged(auth, user => {
+  if (user) {
+    currentUser = user;
+    showApp(user);
+  } else {
+    currentUser = null;
+    showLogin();
+  }
+});
+
 // ── Init ───────────────────────────────────────
 const today = new Date().toISOString().slice(0,10);
 const ioDateEl = document.getElementById('io-date');
 if (ioDateEl) ioDateEl.value = today;
-startListeners();
 </script>
 </body>
 </html>
