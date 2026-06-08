@@ -255,24 +255,42 @@
     .login-box { width: calc(100vw - 32px); padding: 28px 20px; }
   }
   /* ── IO Filter Bar ── */
-  .filter-bar { background:var(--surface2); border-radius:10px; padding:14px 16px; margin-bottom:14px; display:flex; flex-direction:column; gap:10px; }
-  .filter-row { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
-  .filter-label { font-size:11px; color:var(--muted); font-weight:600; text-transform:uppercase; letter-spacing:.6px; min-width:52px; }
-  .filter-chip { padding:5px 12px; border-radius:20px; font-size:12px; cursor:pointer; border:1px solid var(--border); background:transparent; color:var(--muted); font-family:inherit; transition:all .15s; white-space:nowrap; }
-  .filter-chip:hover { border-color:var(--accent); color:var(--text); }
-  .filter-chip.active { background:var(--accent); color:#fff; border-color:var(--accent); }
-  .filter-chip.active-yellow { background:var(--yellow); color:#000; border-color:var(--yellow); }
-  .filter-chip.active-red { background:var(--red); color:#fff; border-color:var(--red); }
-  .filter-chip.active-green { background:var(--green); color:#000; border-color:var(--green); }
-  .filter-divider { width:1px; height:16px; background:var(--border); flex-shrink:0; }
-  .filter-reset { padding:5px 10px; border-radius:20px; font-size:11px; cursor:pointer; border:1px solid var(--border); background:transparent; color:var(--muted); font-family:inherit; transition:all .15s; }
+  .filter-bar { background:var(--surface2); border-radius:10px; padding:14px 16px; margin-bottom:14px; }
+  .filter-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:10px; }
+  .filter-col { display:flex; flex-direction:column; gap:6px; }
+  .filter-label { font-size:11px; color:var(--muted); font-weight:600; text-transform:uppercase; letter-spacing:.6px; }
+  .filter-listbox {
+    background:var(--bg); border:1px solid var(--border); border-radius:8px;
+    overflow-y:auto; max-height:160px;
+  }
+  .filter-listbox::-webkit-scrollbar { width:4px; }
+  .filter-listbox::-webkit-scrollbar-track { background:transparent; }
+  .filter-listbox::-webkit-scrollbar-thumb { background:var(--border); border-radius:2px; }
+  .filter-option {
+    padding:7px 12px; font-size:12px; cursor:pointer;
+    color:var(--muted); border-bottom:1px solid var(--border);
+    transition:all .12s; display:flex; align-items:center; gap:6px;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  }
+  .filter-option:last-child { border-bottom:none; }
+  .filter-option:hover { background:var(--surface2); color:var(--text); }
+  .filter-option.active { background:var(--accent-glow); color:var(--accent); font-weight:600; }
+  .filter-option.active-yellow { background:rgba(245,158,11,.1); color:var(--yellow); font-weight:600; }
+  .filter-option.active-red    { background:rgba(239,68,68,.1);  color:var(--red);    font-weight:600; }
+  .filter-option.active-green  { background:rgba(34,197,94,.1);  color:var(--green);  font-weight:600; }
+  .filter-option.active::before { content:'✓'; font-size:10px; }
+  .filter-option.active-yellow::before { content:'✓'; font-size:10px; }
+  .filter-option.active-red::before    { content:'✓'; font-size:10px; }
+  .filter-option.active-green::before  { content:'✓'; font-size:10px; }
+  .filter-bottom-row { display:flex; align-items:center; gap:8px; margin-top:10px; }
+  .filter-reset { padding:6px 12px; border-radius:7px; font-size:12px; cursor:pointer; border:1px solid var(--border); background:transparent; color:var(--muted); font-family:inherit; transition:all .15s; }
   .filter-reset:hover { color:var(--red); border-color:var(--red); }
-  .filter-count { font-size:12px; color:var(--muted); margin-left:auto; white-space:nowrap; }
+  .filter-count { font-size:12px; color:var(--muted); margin-left:auto; }
 
   @media (max-width: 768px) {
-    .filter-row { gap:6px; }
-    .filter-chip { font-size:11px; padding:4px 10px; }
-    .filter-count { display:none; }
+    .filter-grid { grid-template-columns:repeat(2,1fr); gap:8px; }
+    .filter-listbox { max-height:120px; }
+    .filter-option { font-size:11px; padding:6px 10px; }
   }
 
   /* ── Sort ── */
@@ -428,35 +446,38 @@
 
     <!-- 필터 + 검색 바 -->
     <div class="filter-bar">
-      <!-- 검색 -->
-      <div class="filter-row">
-        <span class="filter-label">검색</span>
+      <div class="filter-grid">
+        <!-- 카테고리 -->
+        <div class="filter-col">
+          <div class="filter-label">카테고리</div>
+          <div class="filter-listbox" id="io-filter-category"></div>
+        </div>
+        <!-- 주관경 -->
+        <div class="filter-col">
+          <div class="filter-label">주관경</div>
+          <div class="filter-listbox" id="io-filter-unit"></div>
+        </div>
+        <!-- 스케줄 -->
+        <div class="filter-col">
+          <div class="filter-label">스케줄</div>
+          <div class="filter-listbox" id="io-filter-schedule"></div>
+        </div>
+        <!-- 상태 -->
+        <div class="filter-col">
+          <div class="filter-label">상태</div>
+          <div class="filter-listbox">
+            <div class="filter-option active" data-filter="status" data-value="all" onclick="setIOFilter('status','all',this)">전체</div>
+            <div class="filter-option" data-filter="status" data-value="ok" onclick="setIOFilter('status','ok',this)">정상</div>
+            <div class="filter-option" data-filter="status" data-value="low" onclick="setIOFilter('status','low',this)">저재고</div>
+            <div class="filter-option" data-filter="status" data-value="zero" onclick="setIOFilter('status','zero',this)">재고없음</div>
+          </div>
+        </div>
+      </div>
+      <!-- 검색 + 초기화 -->
+      <div class="filter-bottom-row">
         <input type="text" class="search-input" id="io-search" placeholder="품목명 검색..." oninput="renderIOList()" style="flex:1;max-width:300px;">
-        <button class="filter-reset" onclick="resetIOFilters()">✕ 초기화</button>
+        <button class="filter-reset" onclick="resetIOFilters()">✕ 필터 초기화</button>
         <span class="filter-count" id="io-filter-count"></span>
-      </div>
-      <!-- 카테고리 -->
-      <div class="filter-row">
-        <span class="filter-label">카테고리</span>
-        <div id="io-filter-category" style="display:flex;gap:6px;flex-wrap:wrap;"></div>
-      </div>
-      <!-- 주관경 -->
-      <div class="filter-row">
-        <span class="filter-label">주관경</span>
-        <div id="io-filter-unit" style="display:flex;gap:6px;flex-wrap:wrap;"></div>
-      </div>
-      <!-- 스케줄 -->
-      <div class="filter-row">
-        <span class="filter-label">스케줄</span>
-        <div id="io-filter-schedule" style="display:flex;gap:6px;flex-wrap:wrap;"></div>
-      </div>
-      <!-- 상태 -->
-      <div class="filter-row">
-        <span class="filter-label">상태</span>
-        <button class="filter-chip active" data-filter="status" data-value="all" onclick="setIOFilter('status','all',this)">전체</button>
-        <button class="filter-chip" data-filter="status" data-value="ok" onclick="setIOFilter('status','ok',this)">🟢 정상</button>
-        <button class="filter-chip" data-filter="status" data-value="low" onclick="setIOFilter('status','low',this)">🟡 저재고</button>
-        <button class="filter-chip" data-filter="status" data-value="zero" onclick="setIOFilter('status','zero',this)">🔴 재고없음</button>
       </div>
     </div>
 
@@ -938,43 +959,40 @@ window.deleteItem = async function(id) {
 const ioFilters = { category: 'all', unit: 'all', schedule: 'all', status: 'all' };
 
 function buildIOFilterChips() {
-  // 카테고리 칩
-  const cats = ['all', ...new Set(itemsCache.map(i => i.category).filter(Boolean).sort())];
-  const unitVals = ['all', ...new Set(itemsCache.map(i => i.unit).filter(Boolean).sort())];
+  const cats      = ['all', ...new Set(itemsCache.map(i => i.category).filter(Boolean).sort())];
+  const unitVals  = ['all', ...new Set(itemsCache.map(i => i.unit).filter(Boolean).sort())];
   const schedVals = ['all', ...new Set(itemsCache.map(i => i.schedule).filter(Boolean).sort())];
 
-  function renderChips(containerId, filterKey, values) {
+  function renderList(containerId, filterKey, values) {
     const container = document.getElementById(containerId);
     if (!container) return;
     container.innerHTML = values.map(v => {
-      const label = v === 'all' ? '전체' : v;
+      const label    = v === 'all' ? '전체' : v;
       const isActive = ioFilters[filterKey] === v;
-      return `<button class="filter-chip ${isActive ? 'active' : ''}"
+      return `<div class="filter-option ${isActive ? 'active' : ''}"
         data-filter="${filterKey}" data-value="${v}"
-        onclick="setIOFilter('${filterKey}','${v}',this)">${label}</button>`;
+        onclick="setIOFilter('${filterKey}','${v}',this)">${label}</div>`;
     }).join('');
   }
-  renderChips('io-filter-category', 'category', cats);
-  renderChips('io-filter-unit',     'unit',     unitVals);
-  renderChips('io-filter-schedule', 'schedule', schedVals);
+  renderList('io-filter-category', 'category', cats);
+  renderList('io-filter-unit',     'unit',     unitVals);
+  renderList('io-filter-schedule', 'schedule', schedVals);
 }
 
 window.setIOFilter = function(filterKey, value, el) {
   ioFilters[filterKey] = value;
-  // 같은 필터 그룹 칩 업데이트
-  const parent = el.closest('[id^="io-filter-"]') || el.closest('.filter-row');
-  if (parent) {
-    parent.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active','active-yellow','active-red','active-green'));
-  } else {
-    // 상태 필터는 filter-row 안에 직접
-    document.querySelectorAll(`[data-filter="${filterKey}"]`).forEach(c => c.classList.remove('active','active-yellow','active-red','active-green'));
+  // 같은 그룹 내 옵션 초기화
+  const listbox = el.closest('.filter-listbox');
+  if (listbox) {
+    listbox.querySelectorAll('.filter-option').forEach(o =>
+      o.classList.remove('active','active-yellow','active-red','active-green'));
   }
   // 상태별 색상
   if (filterKey === 'status') {
-    if (value === 'low')  el.classList.add('active-yellow');
+    if      (value === 'low')  el.classList.add('active-yellow');
     else if (value === 'zero') el.classList.add('active-red');
     else if (value === 'ok')   el.classList.add('active-green');
-    else el.classList.add('active');
+    else                       el.classList.add('active');
   } else {
     el.classList.add('active');
   }
@@ -988,9 +1006,10 @@ window.resetIOFilters = function() {
   ioFilters.status   = 'all';
   const searchEl = document.getElementById('io-search');
   if (searchEl) searchEl.value = '';
-  buildIOFilterChips();
-  // 상태 칩도 초기화
-  document.querySelectorAll('[data-filter="status"]').forEach(c => c.classList.remove('active','active-yellow','active-red','active-green'));
+  buildIOFilterChips(); // 리스트 재빌드 (선택 상태 포함)
+  // 상태 listbox 초기화
+  document.querySelectorAll('[data-filter="status"]').forEach(o =>
+    o.classList.remove('active','active-yellow','active-red','active-green'));
   document.querySelector('[data-filter="status"][data-value="all"]')?.classList.add('active');
   renderIOList();
 }
