@@ -254,6 +254,27 @@
   @media (max-width: 768px) {
     .login-box { width: calc(100vw - 32px); padding: 28px 20px; }
   }
+  /* ── IO Filter Bar ── */
+  .filter-bar { background:var(--surface2); border-radius:10px; padding:14px 16px; margin-bottom:14px; display:flex; flex-direction:column; gap:10px; }
+  .filter-row { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+  .filter-label { font-size:11px; color:var(--muted); font-weight:600; text-transform:uppercase; letter-spacing:.6px; min-width:52px; }
+  .filter-chip { padding:5px 12px; border-radius:20px; font-size:12px; cursor:pointer; border:1px solid var(--border); background:transparent; color:var(--muted); font-family:inherit; transition:all .15s; white-space:nowrap; }
+  .filter-chip:hover { border-color:var(--accent); color:var(--text); }
+  .filter-chip.active { background:var(--accent); color:#fff; border-color:var(--accent); }
+  .filter-chip.active-yellow { background:var(--yellow); color:#000; border-color:var(--yellow); }
+  .filter-chip.active-red { background:var(--red); color:#fff; border-color:var(--red); }
+  .filter-chip.active-green { background:var(--green); color:#000; border-color:var(--green); }
+  .filter-divider { width:1px; height:16px; background:var(--border); flex-shrink:0; }
+  .filter-reset { padding:5px 10px; border-radius:20px; font-size:11px; cursor:pointer; border:1px solid var(--border); background:transparent; color:var(--muted); font-family:inherit; transition:all .15s; }
+  .filter-reset:hover { color:var(--red); border-color:var(--red); }
+  .filter-count { font-size:12px; color:var(--muted); margin-left:auto; white-space:nowrap; }
+
+  @media (max-width: 768px) {
+    .filter-row { gap:6px; }
+    .filter-chip { font-size:11px; padding:4px 10px; }
+    .filter-count { display:none; }
+  }
+
   /* ── Sort ── */
   .sort-th { cursor:pointer; user-select:none; white-space:nowrap; }
   .sort-th:hover { color:var(--text); background:rgba(59,130,246,.08); }
@@ -404,10 +425,41 @@
         <input type="date" id="io-date" style="background:var(--surface);border:1px solid var(--border);border-radius:7px;color:var(--text);padding:7px 12px;font-size:13px;font-family:inherit;outline:none;">
       </div>
     </div>
-    <!-- 검색 -->
-    <div style="margin-bottom:14px;">
-      <input type="text" class="search-input" id="io-search" placeholder="품목명 검색..." oninput="renderIOList()" style="width:100%;max-width:340px;">
+
+    <!-- 필터 + 검색 바 -->
+    <div class="filter-bar">
+      <!-- 검색 -->
+      <div class="filter-row">
+        <span class="filter-label">검색</span>
+        <input type="text" class="search-input" id="io-search" placeholder="품목명 검색..." oninput="renderIOList()" style="flex:1;max-width:300px;">
+        <button class="filter-reset" onclick="resetIOFilters()">✕ 초기화</button>
+        <span class="filter-count" id="io-filter-count"></span>
+      </div>
+      <!-- 카테고리 -->
+      <div class="filter-row">
+        <span class="filter-label">카테고리</span>
+        <div id="io-filter-category" style="display:flex;gap:6px;flex-wrap:wrap;"></div>
+      </div>
+      <!-- 주관경 -->
+      <div class="filter-row">
+        <span class="filter-label">주관경</span>
+        <div id="io-filter-unit" style="display:flex;gap:6px;flex-wrap:wrap;"></div>
+      </div>
+      <!-- 스케줄 -->
+      <div class="filter-row">
+        <span class="filter-label">스케줄</span>
+        <div id="io-filter-schedule" style="display:flex;gap:6px;flex-wrap:wrap;"></div>
+      </div>
+      <!-- 상태 -->
+      <div class="filter-row">
+        <span class="filter-label">상태</span>
+        <button class="filter-chip active" data-filter="status" data-value="all" onclick="setIOFilter('status','all',this)">전체</button>
+        <button class="filter-chip" data-filter="status" data-value="ok" onclick="setIOFilter('status','ok',this)">🟢 정상</button>
+        <button class="filter-chip" data-filter="status" data-value="low" onclick="setIOFilter('status','low',this)">🟡 저재고</button>
+        <button class="filter-chip" data-filter="status" data-value="zero" onclick="setIOFilter('status','zero',this)">🔴 재고없음</button>
+      </div>
     </div>
+
     <div class="table-wrap">
       <table>
         <thead><tr>
@@ -524,7 +576,7 @@
       <div class="form-group"><label>스케줄</label><input type="text" id="m-schedule" placeholder="예: SCH40, SCH80"></div>
       <div class="form-group"><label>무게 / 등급</label><input type="text" id="m-weight" placeholder="예: 150LB, 300LB, 10K"></div>
       <div class="form-group"><label>초기 수량</label><input type="number" id="m-qty" min="0" value="0"></div>
-      <div class="form-group full"><label>최소 수량 (저재고 기준, 기본값: 0)</label><input type="number" id="m-min" min="0" value="0"></div>
+      <div class="form-group full"><label>최소 수량 (저재고 기준, 기본값: 1)</label><input type="number" id="m-min" min="0" value="1"></div>
       <div class="form-group full"><label>메모</label><textarea id="m-memo" placeholder="품목 설명 (선택)"></textarea></div>
     </div>
     <div class="modal-footer">
@@ -600,6 +652,7 @@ function startListeners() {
     setDbStatus('connected');
     renderItems();
     fillItemSelects();
+    buildIOFilterChips();
     if (document.getElementById('page-dashboard').classList.contains('active')) {
       renderDashboard();
     }
@@ -881,12 +934,90 @@ window.deleteItem = async function(id) {
 }
 
 // ── IO List (입고/출고 통합) ────────────────────
+// ── IO Filter State ───────────────────────────
+const ioFilters = { category: 'all', unit: 'all', schedule: 'all', status: 'all' };
+
+function buildIOFilterChips() {
+  // 카테고리 칩
+  const cats = ['all', ...new Set(itemsCache.map(i => i.category).filter(Boolean).sort())];
+  const unitVals = ['all', ...new Set(itemsCache.map(i => i.unit).filter(Boolean).sort())];
+  const schedVals = ['all', ...new Set(itemsCache.map(i => i.schedule).filter(Boolean).sort())];
+
+  function renderChips(containerId, filterKey, values) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    container.innerHTML = values.map(v => {
+      const label = v === 'all' ? '전체' : v;
+      const isActive = ioFilters[filterKey] === v;
+      return `<button class="filter-chip ${isActive ? 'active' : ''}"
+        data-filter="${filterKey}" data-value="${v}"
+        onclick="setIOFilter('${filterKey}','${v}',this)">${label}</button>`;
+    }).join('');
+  }
+  renderChips('io-filter-category', 'category', cats);
+  renderChips('io-filter-unit',     'unit',     unitVals);
+  renderChips('io-filter-schedule', 'schedule', schedVals);
+}
+
+window.setIOFilter = function(filterKey, value, el) {
+  ioFilters[filterKey] = value;
+  // 같은 필터 그룹 칩 업데이트
+  const parent = el.closest('[id^="io-filter-"]') || el.closest('.filter-row');
+  if (parent) {
+    parent.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active','active-yellow','active-red','active-green'));
+  } else {
+    // 상태 필터는 filter-row 안에 직접
+    document.querySelectorAll(`[data-filter="${filterKey}"]`).forEach(c => c.classList.remove('active','active-yellow','active-red','active-green'));
+  }
+  // 상태별 색상
+  if (filterKey === 'status') {
+    if (value === 'low')  el.classList.add('active-yellow');
+    else if (value === 'zero') el.classList.add('active-red');
+    else if (value === 'ok')   el.classList.add('active-green');
+    else el.classList.add('active');
+  } else {
+    el.classList.add('active');
+  }
+  renderIOList();
+}
+
+window.resetIOFilters = function() {
+  ioFilters.category = 'all';
+  ioFilters.unit     = 'all';
+  ioFilters.schedule = 'all';
+  ioFilters.status   = 'all';
+  const searchEl = document.getElementById('io-search');
+  if (searchEl) searchEl.value = '';
+  buildIOFilterChips();
+  // 상태 칩도 초기화
+  document.querySelectorAll('[data-filter="status"]').forEach(c => c.classList.remove('active','active-yellow','active-red','active-green'));
+  document.querySelector('[data-filter="status"][data-value="all"]')?.classList.add('active');
+  renderIOList();
+}
+
 window.renderIOList = function() {
   const q = (document.getElementById('io-search')?.value||'').toLowerCase();
-  let filtered = itemsCache.filter(i => i.name.toLowerCase().includes(q) || (i.category||'').toLowerCase().includes(q));
+  let filtered = itemsCache.filter(i => {
+    // 텍스트 검색
+    if (q && !i.name.toLowerCase().includes(q) && !(i.category||'').toLowerCase().includes(q)) return false;
+    // 카테고리 필터
+    if (ioFilters.category !== 'all' && (i.category||'') !== ioFilters.category) return false;
+    // 주관경 필터
+    if (ioFilters.unit !== 'all' && (i.unit||'') !== ioFilters.unit) return false;
+    // 스케줄 필터
+    if (ioFilters.schedule !== 'all' && (i.schedule||'') !== ioFilters.schedule) return false;
+    // 상태 필터
+    if (ioFilters.status === 'ok'   && !(i.qty > i.minQty)) return false;
+    if (ioFilters.status === 'low'  && !(i.qty > 0 && i.qty <= i.minQty)) return false;
+    if (ioFilters.status === 'zero' && i.qty !== 0) return false;
+    return true;
+  });
   const { key: sKey, dir: sDir } = sortState.io;
   filtered = applySort(filtered, sKey, sDir);
   updateSortIcons('page-inbound', sKey, sDir);
+  // 필터 결과 수 표시
+  const countEl = document.getElementById('io-filter-count');
+  if (countEl) countEl.textContent = `${filtered.length} / ${itemsCache.length}개 표시 중`;
   const tb = document.getElementById('io-tbody');
   if (!tb) return;
   if (filtered.length === 0) {
@@ -951,6 +1082,7 @@ window.fillItemSelects = function() {
   const today = new Date().toISOString().slice(0,10);
   const el = document.getElementById('io-date');
   if (el && !el.value) el.value = today;
+  buildIOFilterChips();
   renderIOList();
 }
 window.doInbound  = function() {}
