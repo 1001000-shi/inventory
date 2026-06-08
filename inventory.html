@@ -463,6 +463,23 @@
       <div class="page-title">👑 관리자 <span>bc25.kim@samsung.com</span></div>
     </div>
 
+    <!-- 품목 삭제 섹션 -->
+    <div class="table-wrap" style="margin-bottom:20px;">
+      <div class="table-header">
+        <div class="table-title">📦 품목 관리</div>
+      </div>
+      <div style="padding:20px;display:flex;flex-direction:column;gap:12px;">
+        <div style="font-size:13px;color:var(--muted);line-height:1.6;">
+          품목을 삭제하면 복구할 수 없습니다.<br>
+          입출고 이력은 삭제되지 않습니다.
+        </div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;">
+          <button class="btn btn-danger" onclick="clearAllItems()">🗑 전체 품목 삭제</button>
+        </div>
+        <div style="font-size:12px;color:var(--muted)" id="items-count-info"></div>
+      </div>
+    </div>
+
     <!-- 이력 삭제 섹션 -->
     <div class="table-wrap" style="margin-bottom:20px;">
       <div class="table-header">
@@ -507,7 +524,7 @@
       <div class="form-group"><label>스케줄</label><input type="text" id="m-schedule" placeholder="예: SCH40, SCH80"></div>
       <div class="form-group"><label>무게 / 등급</label><input type="text" id="m-weight" placeholder="예: 150LB, 300LB, 10K"></div>
       <div class="form-group"><label>초기 수량</label><input type="number" id="m-qty" min="0" value="0"></div>
-      <div class="form-group full"><label>최소 수량 (저재고 기준, 기본값: 1)</label><input type="number" id="m-min" min="0" value="1"></div>
+      <div class="form-group full"><label>최소 수량 (저재고 기준, 기본값: 0)</label><input type="number" id="m-min" min="0" value="0"></div>
       <div class="form-group full"><label>메모</label><textarea id="m-memo" placeholder="품목 설명 (선택)"></textarea></div>
     </div>
     <div class="modal-footer">
@@ -1181,6 +1198,29 @@ function showApp(user) {
 }
 
 // ── Admin Functions ───────────────────────────
+window.clearAllItems = async function() {
+  const count = itemsCache.length;
+  if (count === 0) { toast('삭제할 품목이 없습니다', 'error'); return; }
+  if (!confirm(`품목 ${count}개를 전체 삭제하시겠습니까?\n\n⚠️ 이 작업은 되돌릴 수 없습니다.`)) return;
+  // 한 번 더 확인
+  const confirm2 = prompt(`정말 삭제하려면 "전체삭제" 를 입력하세요:`);
+  if (confirm2 !== '전체삭제') { toast('취소되었습니다'); return; }
+  if (!isAdmin()) { toast('관리자만 가능합니다', 'error'); return; }
+
+  toast('삭제 중...', 'info');
+  try {
+    const batchSize = 400;
+    const allDocs   = itemsCache.map(i => i.id);
+    for (let i = 0; i < allDocs.length; i += batchSize) {
+      const chunk = allDocs.slice(i, i + batchSize);
+      await Promise.all(chunk.map(id => deleteDoc(doc(db, 'items', id))));
+    }
+    toast(`✅ 품목 ${count}개 삭제 완료`);
+  } catch(e) {
+    toast('삭제 실패: ' + e.message, 'error');
+  }
+}
+
 window.clearAllHistory = async function() {
   const count = historyCache.length;
   if (count === 0) { toast('삭제할 이력이 없습니다', 'error'); return; }
@@ -1226,6 +1266,8 @@ window.loadUserStats = function() {
   // 이력 수 표시
   const infoEl = document.getElementById('history-count-info');
   if (infoEl) infoEl.textContent = `현재 저장된 이력: 총 ${historyCache.length}건`;
+  const itemsInfoEl = document.getElementById('items-count-info');
+  if (itemsInfoEl) itemsInfoEl.textContent = `현재 등록된 품목: 총 ${itemsCache.length}개`;
 }
 
 // navigateTo에서 admin 페이지 접근 시 통계 자동 로드
